@@ -1,0 +1,126 @@
+/* External connection page */
+
+.external-page .container {
+  padding-bottom: 32px;
+}
+
+.method-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.method-header .card-title {
+  margin-bottom: 0;
+}
+
+.method-state {
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.method-state.ready {
+  color: var(--green-dark);
+}
+
+.method-state.not-ready {
+  color: #C62828;
+}
+
+.external-method-card {
+  margin-bottom: 16px;
+}
+
+.external-btn {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+}
+
+.auth-lead {
+  margin: 12px 0 8px;
+  color: var(--text-sub);
+}
+
+.auth-url {
+  display: block;
+  word-break: break-all;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.auth-qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 12px;
+}
+
+.setup-steps {
+  margin: 12px 0 16px;
+  padding-left: 20px;
+  color: var(--text-sub);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.setup-steps li {
+  margin-bottom: 6px;
+}
+
+.setup-ok {
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 8px;
+}
+
+.playit-pill {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.playit-pill.connected {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+
+.playit-pill.unauthenticated,
+.playit-pill.disconnected {
+  background: #F2F2F7;
+  color: var(--text-sub);
+}
+
+.playit-pill.authenticating {
+  background: #FFF4E5;
+  color: #B86E00;
+}
+
+.playit-pill.error {
+  background: #FFECEC;
+  color: #C62828;
+}
+
+.external-playit-card .info-list {
+  margin-bottom: 8px;
+}
+
+.external-mode-label {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+}
+
+.iphone-help { margin-top: 16px; padding-top: 12px; border-top: 1px solid #E5E5EA; }
+.warn-note { color: #B86E00; margin-top: 8px; }
+
+.disconnect-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #E5E5EA;
+}
+

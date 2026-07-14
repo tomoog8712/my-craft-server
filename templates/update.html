@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アップデート - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/update.css?v=1">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">アップデート</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card">
+      <h2 class="card-title">Minecraft Bedrock Server</h2>
+      <dl class="version-grid">
+        <div class="version-row"><dt>現在のバージョン</dt><dd id="current-version">-</dd></div>
+        <div class="version-row"><dt>最新版</dt><dd id="latest-version">-</dd></div>
+        <div class="version-row"><dt>更新状態</dt><dd><span id="update-status" class="status-pill ok">確認中…</span></dd></div>
+      </dl>
+      <button type="button" class="btn btn-primary" id="btn-update" style="width:100%;margin-top:12px;" disabled>アップデートする</button>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">更新履歴</h2>
+      <div id="history-list" class="history-list">
+        <p class="card-label">履歴はありません</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="update-overlay" class="update-overlay" hidden>
+    <div class="update-panel">
+      <h2 id="overlay-title">Minecraftを更新しています</h2>
+      <div class="step-list">
+        <div class="step-item" data-step="backup"><span class="step-dot">1</span><span>バックアップ作成</span></div>
+        <div class="step-item" data-step="download"><span class="step-dot">2</span><span>ダウンロード</span></div>
+        <div class="step-item" data-step="install"><span class="step-dot">3</span><span>更新</span></div>
+        <div class="step-item" data-step="start"><span class="step-dot">4</span><span>起動</span></div>
+      </div>
+      <p id="overlay-message">しばらくお待ちください…</p>
+    </div>
+  </div>
+
+  <div id="confirm-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="confirm-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-body" id="confirm-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="confirm-ok">アップデート</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="done-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="done-backdrop"></div>
+    <div class="sheet-panel">
+      <h2 class="card-title" style="margin-bottom:12px;">アップデート完了</h2>
+      <p class="dialog-body" id="done-text"></p>
+      <button type="button" class="btn btn-primary" id="done-close" style="width:100%;">閉じる</button>
+    </div>
+  </div>
+
+  <div id="error-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="error-backdrop"></div>
+    <div class="sheet-panel">
+      <h2 class="card-title" style="margin-bottom:12px;color:var(--red);">アップデートに失敗しました</h2>
+      <p class="dialog-body" id="error-text">バックアップから復元しました。</p>
+      <button type="button" class="btn btn-primary" id="error-close" style="width:100%;">閉じる</button>
+    </div>
+  </div>
+
+  <script src="/static/update.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>プレイヤー管理 - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=4">
+  <link rel="stylesheet" href="/static/players.css?v=5">
+</head>
+<body class="players-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>プレイヤー管理</h1>
+          <p class="subtitle">Bedrock</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card">
+      <div class="players-toolbar">
+        <input type="search" id="player-search" class="players-search" placeholder="プレイヤー検索" autocomplete="off">
+        <select id="player-sort" class="players-sort">
+          <option value="online">オンライン順</option>
+          <option value="name">名前順</option>
+          <option value="joined">参加日時順</option>
+        </select>
+      </div>
+      <p class="card-label" id="players-summary">読み込み中…</p>
+      <div id="player-list" class="player-list"></div>
+    </section>
+
+    <section class="card" id="banlist-section">
+      <h2 class="card-title">BANリスト</h2>
+      <p class="card-label">削除したプレイヤーもここからBAN解除できます。</p>
+      <div id="banlist-list" class="player-ban-list"></div>
+    </section>
+  </main>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+
+  <div id="confirm-sheet" class="sheet sheet-center" hidden>
+    <div class="sheet-backdrop" id="confirm-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-body" id="confirm-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="confirm-ok">変更</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="restart-hint-sheet" class="sheet sheet-center" hidden>
+    <div class="sheet-backdrop" id="restart-hint-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title">反映について</p>
+      <p class="dialog-body" id="restart-hint-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-primary" id="restart-hint-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/players.js?v=4"></script>
+</body>
+</html>

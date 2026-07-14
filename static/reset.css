@@ -1,0 +1,174 @@
+.reset-page .reset-card {
+  margin-bottom: 12px;
+}
+
+.reset-page .reset-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.reset-page .reset-card p {
+  margin: 0 0 12px;
+  color: var(--text-muted, #6c757d);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.reset-page .reset-card .btn {
+  width: 100%;
+}
+
+.reset-page .btn-danger {
+  background: #d00000;
+  border-color: #d00000;
+  color: #fff;
+}
+
+.reset-page .btn-danger:active {
+  background: #a00000;
+}
+
+.preview-body {
+  text-align: left;
+  margin: 12px 0 16px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.preview-section-title {
+  font-weight: 700;
+  margin: 10px 0 6px;
+}
+
+.preview-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.preview-list li {
+  margin: 4px 0;
+}
+
+.reset-code-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+  padding: 12px;
+  margin: 8px 0 16px;
+  border: 1px solid #ced4da;
+  border-radius: 10px;
+}
+
+.reset-page .loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.reset-page .loading-overlay[hidden] {
+  display: none !important;
+}
+
+.reset-page .loading-box {
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px 28px;
+  text-align: center;
+  max-width: 90%;
+}
+
+.reset-page .loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e9ecef;
+  border-top-color: #2d6a4f;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  animation: reset-spin 0.8s linear infinite;
+}
+
+@keyframes reset-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Modal / sheet (required for preview & auth dialogs) */
+.sheet-center:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.sheet-center .sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sheet-center .sheet-panel {
+  position: relative;
+  background: #fff;
+  width: 100%;
+  max-width: 360px;
+  border-radius: 14px;
+  padding: 24px 20px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.dialog-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.dialog-body {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.dialog-actions .btn {
+  flex: 1;
+  min-height: 44px;
+}
+
+.reset-page .snackbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #323232;
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  z-index: 600;
+  max-width: 90%;
+  text-align: center;
+}
+
+.reset-page .snackbar.warn {
+  background: var(--orange, #e85d04);
+}
+
+.reset-page .snackbar[hidden] {
+  display: none !important;
+}

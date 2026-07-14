@@ -1,0 +1,10 @@
+{% set p = request.path %}
+<nav class="nav-links">
+  <a href="/" class="{{ 'active' if p == '/' else '' }}">ダッシュボード</a>
+  <a href="/settings" class="{{ 'active' if p == '/settings' else '' }}">設定</a>
+  <a href="/players" class="{{ 'active' if p == '/players' else '' }}">プレイヤー管理</a>
+  <a href="/worlds" class="{{ 'active' if p == '/worlds' else '' }}">ワールド</a>
+  <a href="/addons" class="{{ 'active' if p == '/addons' else '' }}">アドオン</a>
+  <a href="/external" class="{{ 'active' if p.startswith('/external') or p == '/portforward' else '' }}">外部接続</a>
+  <a href="/health" class="{{ 'active' if p == '/health' else '' }}">システム診断</a>
+</nav>

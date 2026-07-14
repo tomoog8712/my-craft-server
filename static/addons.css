@@ -1,0 +1,221 @@
+
+.world-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(255,255,255,0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.world-overlay[hidden] { display: none !important; }
+.world-overlay-box { text-align: center; }
+.loading-spinner {
+  width: 44px; height: 44px;
+  border: 3px solid #E5E5EA;
+  border-top-color: var(--green);
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.sheet-center:not([hidden]) {
+  position: fixed; inset: 0; z-index: 550;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.sheet-center .sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.35); }
+.sheet-center .sheet-panel {
+  position: relative; background: #fff; width: 100%; max-width: 360px;
+  border-radius: 14px; padding: 24px 20px;
+}
+.dialog-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+.dialog-body { font-size: 0.95rem; line-height: 1.5; margin-bottom: 12px; }
+.dialog-actions { display: flex; gap: 10px; }
+.dialog-actions .btn { flex: 1; min-height: 44px; }
+.snackbar {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #323232; color: white; padding: 14px 24px; border-radius: 12px; z-index: 600;
+}
+.snackbar.warn { background: #8b3a3a; }
+.ui-disabled { opacity: 0.6; pointer-events: none; }
+.file-input-offscreen {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.file-input-offscreen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+}
+
+.addon-dropzone.mobile-upload .addon-file-hint {
+  display: block;
+}
+
+.addon-file-hint {
+  margin-top: 10px;
+  font-size: 0.82rem;
+}
+
+.addon-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  padding: 20px 16px;
+  text-align: center;
+  margin: 12px 0 16px;
+  background: #fafafa;
+}
+
+.addon-drop-lead,
+.addon-drop-types,
+.addon-drop-sub,
+.addon-drop-or {
+  margin: 0 0 6px;
+  color: var(--text-sub);
+  font-size: 0.92rem;
+}
+
+.addon-drop-types {
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.addon-dropzone.mobile-upload .addon-drop-lead,
+.addon-dropzone.mobile-upload .addon-drop-types,
+.addon-dropzone.mobile-upload .addon-drop-sub,
+.addon-dropzone.mobile-upload .addon-drop-or {
+  display: none;
+}
+
+.addon-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.addon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.addon-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+}
+
+.addon-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.addon-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.addon-card-state {
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.addon-card-state.on { color: var(--green-dark); }
+.addon-card-state.off { color: #C62828; }
+
+.addon-meta {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.88rem;
+  color: var(--text-sub);
+}
+
+.addon-meta strong {
+  color: var(--text);
+}
+
+.addon-card-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.addon-toggle {
+  flex: 1;
+  min-height: 44px;
+}
+
+.addon-delete-btn {
+  min-height: 44px;
+}
+
+.addon-history-card {
+  margin-top: 16px;
+}
+
+.addon-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.addon-history-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #E5E5EA;
+  font-size: 0.9rem;
+}
+
+.addon-history-item:last-child {
+  border-bottom: none;
+}
+
+.addon-history-date {
+  color: var(--text-sub);
+  font-size: 0.82rem;
+  margin-bottom: 2px;
+}
+
+.addon-drop-multi {
+  margin: 0 0 8px;
+  color: var(--text-sub);
+  font-size: 0.88rem;
+}
+
+.addon-dropzone.drag-over {
+  border-color: var(--green);
+  background: #f2fbf6;
+}
+
+.addon-card.incomplete {
+  border-color: #f0d58b;
+  background: #fffdf6;
+}
+
+.addon-card-state.incomplete { color: #9a6700; }
+.addon-card-state.ready { color: var(--green-dark); }
+
+.addon-warning {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #9a6700;
+}
+
+.addon-toggle:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}

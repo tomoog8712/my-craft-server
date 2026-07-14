@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Discord通知 - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/update.css?v=1">
+  <link rel="stylesheet" href="/static/discord.css?v=1">
+</head>
+<body class="discord-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">Discord通知</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card">
+      <h2 class="card-title">Discord通知</h2>
+      <dl class="support-status-grid">
+        <div class="support-row">
+          <dt>状態</dt>
+          <dd><span id="discord-state" class="discord-status-pill off">未設定</span></dd>
+        </div>
+      </dl>
+      <div class="discord-form-row">
+        <label for="webhook-input">Webhook URL</label>
+        <input type="text" id="webhook-input" class="discord-input" readonly placeholder="未設定">
+        <button type="button" class="btn btn-outline discord-btn" id="btn-edit-webhook">編集</button>
+        <button type="button" class="btn btn-primary discord-btn" id="btn-save-webhook" hidden>保存</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">接続テスト</h2>
+      <button type="button" class="btn btn-primary discord-btn" id="btn-test">通知を送信</button>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">通知設定</h2>
+      <div id="events-grid" class="discord-events-grid"></div>
+      <button type="button" class="btn btn-primary discord-btn" id="btn-save-events">保存</button>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">通知送信履歴 <span class="badge">最新20件</span></h2>
+      <div id="history-list" class="discord-history">
+        <p class="card-label">履歴はありません</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="snackbar" class="discord-snackbar" hidden></div>
+  <script src="/static/discord.js?v=1"></script>
+</body>
+</html>

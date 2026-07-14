@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ワールド - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/update.css?v=1">
+  <link rel="stylesheet" href="/static/worlds.css?v=9">
+</head>
+<body class="worlds-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">ワールド</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <div id="view-list">
+      <section class="card world-io-card">
+        <h2 class="card-title">インポート / エクスポート</h2>
+        <p class="card-label">スマホでエクスポートした .mcworld や .zip を取り込めます。ファイルをドラッグ＆ドロップも可能です。</p>
+        <button type="button" class="btn btn-primary world-btn" id="btn-import-list">📥 ワールドをインポート</button>
+      </section>
+      <div id="world-list" class="world-list"></div>
+      <button type="button" class="world-card world-card-add" id="btn-new-world">
+        <span class="world-add-icon">＋</span>
+        <span class="world-add-label">新しいワールド</span>
+      </button>
+    </div>
+
+    <div id="view-create" hidden>
+      <section class="card">
+        <h2 class="card-title">新しいワールド</h2>
+        <form id="create-form" class="world-form">
+          <label class="form-field">
+            <span>ワールド名</span>
+            <input type="text" name="name" required maxlength="64" placeholder="家族サーバー">
+          </label>
+
+          <div class="form-section" id="create-basic">
+            <span class="form-label">ゲームモード</span>
+            <div class="radio-row">
+              <label><input type="radio" name="gamemode" value="survival" checked> Survival</label>
+              <label><input type="radio" name="gamemode" value="creative"> Creative</label>
+              <label><input type="radio" name="gamemode" value="adventure"> Adventure</label>
+            </div>
+            <span class="form-label">難易度</span>
+            <div class="radio-row">
+              <label><input type="radio" name="difficulty" value="peaceful"> Peaceful</label>
+              <label><input type="radio" name="difficulty" value="easy"> Easy</label>
+              <label><input type="radio" name="difficulty" value="normal" checked> Normal</label>
+              <label><input type="radio" name="difficulty" value="hard"> Hard</label>
+            </div>
+          </div>
+
+          <div class="form-section" id="create-advanced">
+            <label class="form-field"><span>シード値</span><input type="text" name="seed" placeholder="空欄ならランダム"></label>
+            <label class="form-field"><span>最大人数</span><input type="number" name="max_players" min="1" max="200" value="10"></label>
+            <div class="switch-grid">
+              <label class="switch-cell"><span>初期スポーン保護</span><input type="checkbox" name="spawn_protection" checked class="sw"></label>
+              <label class="switch-cell"><span>PvP</span><input type="checkbox" name="pvp" checked class="sw"></label>
+              <label class="switch-cell"><span>座標表示</span><input type="checkbox" name="show-coordinates" class="sw"></label>
+              <label class="switch-cell"><span>実績</span><input type="checkbox" name="achievements" checked class="sw"></label>
+              <label class="switch-cell"><span>チート許可</span><input type="checkbox" name="allow-cheats" class="sw"></label>
+              <label class="switch-cell"><span>昼夜サイクル</span><input type="checkbox" name="daylight_cycle" checked class="sw"></label>
+              <label class="switch-cell"><span>天候変化</span><input type="checkbox" name="weather" checked class="sw"></label>
+              <label class="switch-cell"><span>即時リスポーン</span><input type="checkbox" name="immediate_respawn" class="sw"></label>
+              <label class="switch-cell"><span>Mobスポーン</span><input type="checkbox" name="mob_spawn" checked class="sw"></label>
+              <label class="switch-cell"><span>Mobによる破壊</span><input type="checkbox" name="mob_griefing" checked class="sw"></label>
+              <label class="switch-cell"><span>TNT爆発</span><input type="checkbox" name="tnt" checked class="sw"></label>
+              <label class="switch-cell"><span>火の延焼</span><input type="checkbox" name="fire_spread" checked class="sw"></label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary world-btn">作成</button>
+          <button type="button" class="btn btn-outline world-btn" id="btn-create-cancel">キャンセル</button>
+        </form>
+      </section>
+    </div>
+
+    <div id="view-detail" hidden>
+      <section class="card" id="detail-card"></section>
+      <section class="card">
+        <h2 class="card-title">操作</h2>
+        <div class="action-grid" id="detail-actions"></div>
+      </section>
+      <section class="card" id="backup-section" hidden>
+        <h2 class="card-title">バックアップ</h2>
+        <div id="backup-list" class="backup-list"></div>
+        <button type="button" class="btn btn-outline world-btn" id="btn-backup-create">バックアップ作成</button>
+      </section>
+    </div>
+
+    <div id="view-settings" hidden>
+      <section class="card">
+        <h2 class="card-title" id="settings-title">ワールド設定</h2>
+        <p class="card-label" id="settings-note">このワールド専用の設定です。他のワールドには影響しません。</p>
+        <form id="settings-form" class="world-form">
+          <div class="form-section">
+            <span class="form-label">ゲームモード</span>
+            <div class="radio-row" id="settings-gamemode"></div>
+            <span class="form-label">難易度</span>
+            <div class="radio-row" id="settings-difficulty"></div>
+          </div>
+
+          <div class="form-section">
+            <label class="form-field"><span>最大人数</span><input type="number" name="max_players" min="1" max="200" value="10"></label>
+            <label class="form-field"><span>シード値</span><input type="text" name="seed" placeholder="空欄ならランダム"><small class="field-hint">既存ワールドでは地形は変わりません</small></label>
+          </div>
+
+          <div class="form-section">
+            <div class="switch-grid" id="settings-switches-basic"></div>
+          </div>
+
+          <div class="form-section" id="settings-advanced">
+            <div class="switch-grid" id="settings-switches-rules"></div>
+          </div>
+
+      <button type="submit" class="btn btn-primary world-btn">保存</button>
+      <button type="button" class="btn btn-outline world-btn" id="btn-settings-cancel">キャンセル</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <div id="overlay" class="world-overlay" hidden>
+    <div class="world-overlay-box">
+      <div class="loading-spinner"></div>
+      <p id="overlay-msg">処理中…</p>
+    </div>
+  </div>
+
+  <div id="confirm-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="confirm-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-body" id="confirm-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="confirm-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="delete-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title">ワールドを削除</p>
+      <p class="dialog-body">削除するにはワールド名を入力してください。</p>
+      <p class="dialog-body" id="delete-target-name"></p>
+      <input type="text" class="cell-input-full" id="delete-confirm-input" placeholder="ワールド名">
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="delete-cancel">キャンセル</button>
+        <button type="button" class="btn btn-stop" id="delete-ok">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="drop-overlay" class="drop-overlay" hidden>
+    <p>zip / mcworld をドロップしてインポート</p>
+  </div>
+
+  <input type="file" id="import-input" accept=".zip,.mcworld" hidden>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+  <script src="/static/worlds.js?v=16"></script>
+</body>
+</html>

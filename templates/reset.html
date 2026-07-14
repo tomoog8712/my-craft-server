@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>リセットセンター - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/reset.css?v=2">
+</head>
+<body class="reset-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">リセットセンター</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card">
+      <h2 class="card-title">リセットセンター</h2>
+      <p class="card-label">設定やワールドを初期化できます。製品IDやシステムは削除されません。</p>
+      <p class="card-label warn-note">リセットはLAN内からのみ実行できます。リモートサポート有効中、またはリモート接続中は実行できません。</p>
+    </section>
+
+    <div id="reset-list"></div>
+  </main>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+
+  <div id="preview-sheet" class="sheet sheet-center" hidden>
+    <div class="sheet-backdrop" id="preview-backdrop"></div>
+    <div class="sheet-panel">
+      <h3 class="dialog-title" id="preview-title">確認</h3>
+      <div id="preview-body" class="preview-body"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="preview-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="preview-next">続ける</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="auth-sheet" class="sheet sheet-center" hidden>
+    <div class="sheet-backdrop" id="auth-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-body">この操作は元に戻せません。</p>
+      <p class="dialog-body"><strong>初期管理コード</strong>を入力してください。</p>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" class="reset-code-input" id="auth-code" placeholder="コードを入力" autocomplete="off">
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="auth-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="auth-run">実行</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="done-sheet" class="sheet sheet-center" hidden>
+    <div class="sheet-backdrop" id="done-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title" id="done-title">初期化が完了しました。</p>
+      <p class="dialog-body" id="done-body" hidden>30秒後に再起動します。</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-primary" id="done-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-overlay" class="loading-overlay" hidden>
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
+      <p class="loading-title">初期化しています…</p>
+      <p class="loading-sub">しばらくお待ちください…</p>
+    </div>
+  </div>
+
+  <script src="/static/reset.js?v=2"></script>
+</body>
+</html>

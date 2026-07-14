@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>外部接続 - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/external.css?v=5">
+</head>
+<body class="external-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">外部接続</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card external-method-card" id="playit-card">
+      <div class="method-header">
+        <h2 class="card-title">Playit.gg</h2>
+        <span id="playit-state-badge" class="method-state">-</span>
+      </div>
+      <p class="card-label">ポート開放不要で外部から接続できます。</p>
+
+      <div id="playit-ready-panel" hidden>
+        <dl class="info-list">
+          <div class="info-item">
+            <dt>Playitアドレス</dt>
+            <dd id="playit-address">-</dd>
+          </div>
+          <div class="info-item">
+            <dt>ポート番号</dt>
+            <dd id="playit-port">-</dd>
+          </div>
+          <div class="info-item info-item-copy">
+            <dt>接続先</dt>
+            <dd class="copy-row">
+              <span id="playit-endpoint">-</span>
+              <button type="button" class="btn-copy" data-copy="playit-endpoint" title="コピー">📋</button>
+            </dd>
+          </div>
+          <div class="info-item">
+            <dt>最終テスト</dt>
+            <dd id="playit-test-result">-</dd>
+          </div>
+        </dl>
+        <button type="button" class="btn btn-outline external-btn" id="btn-test">接続テスト</button>
+        <button type="button" class="btn btn-outline external-btn" id="btn-playit-settings">設定</button>
+      </div>
+
+      <div id="playit-unconfigured-panel">
+        <button type="button" class="btn btn-primary external-btn" id="btn-start-setup">セットアップ</button>
+      </div>
+
+      <div id="playit-setup-panel" hidden>
+        <div id="auth-step" hidden>
+          <p class="card-label">Playit.ggへログインしてください。</p>
+          <button type="button" class="btn btn-primary external-btn" id="btn-start-auth">認証を開始</button>
+
+          <div id="auth-panel" hidden>
+            <p class="auth-lead">ブラウザで認証してください。認証完了後、自動で続行します。</p>
+            <p class="card-label warn-note"><strong>重要:</strong> Playit.ggで「Agent Setup」「Agent is offline」と表示されても無視してください。この管理画面に戻れば自動で進みます。</p>
+            <a id="auth-url" class="auth-url" href="#" target="_blank" rel="noopener">-</a>
+            <div class="auth-qr-wrap">
+              <img id="auth-qr" alt="認証QRコード" width="180" height="180" hidden>
+            </div>
+            <p class="card-label" id="auth-wait-label">認証待ち…</p>
+          </div>
+        </div>
+
+        <div id="tunnel-step" hidden>
+          <p class="setup-ok">✅ Agent認証が完了しました</p>
+          <p class="card-label">次に <strong>Minecraft Bedrock</strong> トンネルを作成します。まず下の「トンネルを自動作成」を試してください。</p>
+          <button type="button" class="btn btn-primary external-btn" id="btn-create-tunnel">トンネルを自動作成</button>
+          <p class="card-label" style="margin-top:1rem">手動で作成する場合（Playit.ggの「Agent Setup」画面は使わないでください）:</p>
+          <ol class="setup-steps">
+            <li><a href="https://playit.gg/account/agents" target="_blank" rel="noopener">Agents</a> で <strong>IPv4 only（IPv4のみ）</strong> を選択（本サーバーはIPv6非対応のため必須）</li>
+            <li><a href="https://playit.gg/account/tunnels" target="_blank" rel="noopener">Tunnels</a> から「Add tunnel」→「Minecraft Bedrock」を選択</li>
+            <li>ローカルIPは <strong>127.0.0.1</strong>、ポートはサーバー設定の <strong id="tunnel-local-port">19132</strong></li>
+            <li>作成後、「アドレスを更新」で <strong>ip.gl.ply.gg</strong> 形式の参加用アドレスが表示されます</li>
+          </ol>
+          <a href="https://playit.gg/account/tunnels" target="_blank" rel="noopener" class="btn btn-outline external-btn" id="btn-open-playit">Playit.ggを開く</a>
+          <button type="button" class="btn btn-outline external-btn" id="btn-refresh-tunnel">アドレスを更新</button>
+        </div>
+
+        <div class="disconnect-section">
+          <p class="card-label">最初からテストし直す場合は「接続を解除」を押してください。解除後、新しい認証用QRとリンクが自動で表示されます。</p>
+          <button type="button" class="btn btn-stop external-btn" id="btn-disconnect">接続を解除</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card external-method-card" id="portforward-card">
+      <div class="method-header">
+        <h2 class="card-title">ポート開放</h2>
+        <span id="pf-state-badge" class="method-state">-</span>
+      </div>
+      <p class="card-label">ルーターのポート転送設定で高速に接続できます。</p>
+
+      <dl class="info-list">
+        <div class="info-item">
+          <dt>LAN IP</dt>
+          <dd id="pf-lan-ip">-</dd>
+        </div>
+        <div class="info-item">
+          <dt>グローバルIP</dt>
+          <dd id="pf-public-ip">-</dd>
+        </div>
+        <div class="info-item">
+          <dt>Minecraftポート</dt>
+          <dd id="pf-mc-port">-</dd>
+        </div>
+        <div class="info-item info-item-copy">
+          <dt>接続先</dt>
+          <dd class="copy-row">
+            <span id="pf-target">-</span>
+            <button type="button" class="btn-copy" data-copy="pf-target" title="コピー">📋</button>
+          </dd>
+        </div>
+      </dl>
+
+      <button type="button" class="btn btn-outline external-btn" id="btn-pf-copy">コピー</button>
+      <button type="button" class="btn btn-outline external-btn" id="btn-pf-test">接続テスト</button>
+      <a href="/portforward" class="btn btn-outline external-btn" style="text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">ルーター設定の詳細</a>
+    </section>
+  </main>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+
+  <script src="/static/external.js?v=12"></script>
+</body>
+</html>

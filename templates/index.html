@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=4">
+  <link rel="stylesheet" href="/static/worlds.css?v=1">
+  <link rel="stylesheet" href="/static/discord.css?v=1">
+  <link rel="stylesheet" href="/static/players.css?v=1">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">管理パネル</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span id="header-dot" class="status-dot"></span>
+        <span id="header-status-text">読み込み中...</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <main class="container">
+    {% include '_nav.html' %}
+    <section class="card card-highlight">
+      <div class="card-row">
+        <div>
+          <h2 class="card-title">製品情報</h2>
+          <p class="card-label">製品ID</p>
+          <p class="card-value-lg" id="product-id">-</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">サーバー状態</h2>
+      <div class="status-row">
+        <span id="server-dot" class="status-dot"></span>
+        <span id="server-status" class="status-text">-</span>
+      </div>
+      <p id="server-action-msg" class="action-msg" hidden></p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-start" id="btn-start">開始</button>
+        <button type="button" class="btn btn-stop" id="btn-stop">停止</button>
+        <button type="button" class="btn btn-restart" id="btn-restart">再起動</button>
+        <button type="button" class="btn btn-primary" id="btn-scroll-log">ログを見る</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">LAN接続</h2>
+      <dl class="info-list">
+        <div class="info-item info-item-copy">
+          <dt>ホスト名</dt>
+          <dd class="copy-row">
+            <span id="lan-hostname">-</span>
+            <button type="button" class="btn-copy" data-copy="lan-hostname" title="コピー">📋</button>
+          </dd>
+        </div>
+        <div class="info-item info-item-copy">
+          <dt>IP</dt>
+          <dd class="copy-row">
+            <span id="lan-ip">-</span>
+            <button type="button" class="btn-copy" data-copy="lan-ip" title="コピー">📋</button>
+          </dd>
+        </div>
+        <div class="info-item info-item-copy">
+          <dt>Minecraftポート</dt>
+          <dd class="copy-row">
+            <span id="lan-port">-</span>
+            <button type="button" class="btn-copy" data-copy="lan-port" title="コピー">📋</button>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="card" id="external-card">
+      <h2 class="card-title">外部接続</h2>
+
+      <div class="home-external-block">
+        <div class="home-ext-header">
+          <span class="home-ext-label">Playit.gg</span>
+          <span id="home-playit-state" class="home-ext-state">-</span>
+        </div>
+        <div class="info-item info-item-copy home-ext-target-row">
+          <dd class="copy-row" style="margin:0;width:100%;justify-content:space-between;">
+            <span id="home-playit-target">-</span>
+            <button type="button" class="btn-copy" data-copy="home-playit-target" title="コピー">📋</button>
+          </dd>
+        </div>
+      </div>
+
+      <div class="home-external-block">
+        <div class="home-ext-header">
+          <span class="home-ext-label">ポート開放</span>
+          <span id="home-pf-state" class="home-ext-state">-</span>
+        </div>
+        <div class="info-item info-item-copy home-ext-target-row">
+          <dd class="copy-row" style="margin:0;width:100%;justify-content:space-between;">
+            <span id="home-pf-target">-</span>
+            <button type="button" class="btn-copy" data-copy="home-pf-target" title="コピー">📋</button>
+          </dd>
+        </div>
+      </div>
+
+      <a href="/external" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">外部接続設定</a>
+    </section>
+
+    <section class="card card-highlight" id="home-players-card">
+      <h2 class="card-title">現在接続中</h2>
+      <p class="home-players-count" id="home-players-count">-</p>
+      <div class="home-players-list" id="home-players-list"></div>
+      <a href="/players" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">プレイヤー管理</a>
+    </section>
+
+    <section class="card card-highlight" id="home-world-card">
+      <h2 class="card-title">現在</h2>
+      <div class="world-home-row">
+        <span class="world-home-icon" id="home-world-icon">🏠</span>
+        <div>
+          <p class="world-home-title" id="home-world-name">-</p>
+          <p class="world-home-meta" id="home-world-meta">-</p>
+          <p class="world-home-meta" id="home-world-players">-</p>
+        </div>
+      </div>
+      <a href="/worlds" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">ワールド管理</a>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">メンテナンス</h2>
+      <div class="btn-row" style="flex-direction:column;">
+        <a href="/settings" class="btn btn-outline" style="text-align:center;text-decoration:none;">サーバー名変更</a>
+        <a href="/external" class="btn btn-outline" style="text-align:center;text-decoration:none;">外部接続</a>
+        <a href="/update" class="btn btn-outline" style="text-align:center;text-decoration:none;">アップデート</a>
+        <a href="/addons" class="btn btn-outline" style="text-align:center;text-decoration:none;">アドオン</a>
+        <a href="/reset" class="btn btn-outline" style="text-align:center;text-decoration:none;">リセット</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Minecraft</h2>
+      <dl class="info-list">
+        <div class="info-item"><dt>サーバー名</dt><dd id="mc-server-name">-</dd></div>
+        <div class="info-item"><dt>現在人数</dt><dd id="mc-players">-</dd></div>
+        <div class="info-item"><dt>バージョン</dt><dd id="mc-version">-</dd></div>
+        <div class="info-item"><dt>稼働時間</dt><dd id="mc-uptime">-</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">システム情報</h2>
+      <dl class="info-list">
+        <div class="info-item"><dt>CPU使用率</dt><dd id="sys-cpu">-</dd></div>
+        <div class="info-item"><dt>メモリ</dt><dd id="sys-memory">-</dd></div>
+        <div class="info-item"><dt>SSD使用量</dt><dd id="sys-disk">-</dd></div>
+        <div class="info-item"><dt>稼働時間</dt><dd id="sys-uptime">-</dd></div>
+        <div class="info-item"><dt>OSバージョン</dt><dd id="sys-os">-</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">システム診断</h2>
+      <p class="card-label">現在の状態を確認します。</p>
+      <a href="/health" class="btn btn-primary" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">診断開始</a>
+    </section>
+
+    <section class="card" id="discord-card-mini">
+      <h2 class="card-title">Discord</h2>
+      <p class="card-label">通知</p>
+      <p><span id="discord-status-pill" class="discord-pill-mini off">未設定</span></p>
+      <a href="/discord" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">設定</a>
+    </section>
+
+    <section class="card" id="support-card">
+      <h2 class="card-title">サポート</h2>
+      <p class="card-label">リモートサポート</p>
+      <p><span id="support-status-pill" class="support-pill-mini off">OFF</span></p>
+      <a href="/support" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">詳細</a>
+    </section>
+
+    <section class="card" id="log-section">
+      <h2 class="card-title">ログ <span class="badge">最新10件</span></h2>
+      <pre class="log-box" id="log-box">読み込み中...</pre>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>my-craft-server &copy; My Craft Server</p>
+  </footer>
+
+  <!-- 確認ダイアログ（初期状態: 完全非表示） -->
+  <div id="confirm-modal" class="modal" hidden>
+    <div class="modal-backdrop" id="confirm-backdrop"></div>
+    <div class="modal-box">
+      <p id="confirm-message" class="modal-message"></p>
+      <div class="modal-actions">
+        <button type="button" id="confirm-cancel" class="btn btn-secondary">キャンセル</button>
+        <button type="button" id="confirm-ok" class="btn btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=8"></script>
+</body>
+</html>

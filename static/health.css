@@ -1,0 +1,231 @@
+/* Health check page */
+
+.health-page .container {
+  padding-bottom: 32px;
+}
+
+.health-btn {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+}
+
+.health-btn:first-of-type {
+  margin-top: 14px;
+}
+
+.health-progress-track {
+  width: 100%;
+  height: 8px;
+  background: #E5E5EA;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 14px 0 16px;
+}
+
+.health-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--green);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.health-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.health-check-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+}
+
+.health-check-item:last-child {
+  border-bottom: none;
+}
+
+.health-check-item:active {
+  background: var(--green-light);
+}
+
+.health-check-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.health-check-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.health-check-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.health-check-right {
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.health-check-right.pass { color: var(--green-dark); }
+.health-check-right.warn { color: #B45309; }
+.health-check-right.fail { color: var(--red); }
+.health-check-right.info { color: #6B7280; }
+.health-check-right.pending { color: var(--text-sub); }
+
+.health-check-item.pending .health-check-icon {
+  opacity: 0.35;
+}
+
+.health-overall {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--green-light);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.health-overall.warn {
+  background: #FFF4E5;
+}
+
+.health-overall.fail {
+  background: #FDE8E8;
+}
+
+.overall-icon {
+  font-size: 1.2rem;
+}
+
+.overall-text {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.qa-result-card {
+  text-align: center;
+}
+
+.qa-pass-box {
+  padding: 24px 16px;
+  border-radius: 12px;
+  background: var(--green-light);
+}
+
+.qa-pass-box.fail {
+  background: #FDE8E8;
+}
+
+.qa-pass-title {
+  font-size: 0.9rem;
+  color: var(--text-sub);
+  margin-bottom: 8px;
+}
+
+.qa-pass-status {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--green-dark);
+}
+
+.qa-pass-box.fail .qa-pass-status {
+  color: var(--red);
+}
+
+.detail-sheet-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.detail-status {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.detail-status.pass { color: var(--green-dark); }
+.detail-status.warn { color: #B45309; }
+.detail-status.fail { color: var(--red); }
+.detail-status.info { color: #6B7280; }
+
+.detail-body {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-bottom: 16px;
+}
+
+.detail-remedy-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+}
+
+.detail-remedy {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.report-sheet-panel {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.report-textarea {
+  width: 100%;
+  min-height: 220px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.snackbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #323232;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  z-index: 600;
+  max-width: 90%;
+  text-align: center;
+}
+
+.ui-disabled button,
+.ui-disabled .health-check-item {
+  pointer-events: none;
+  opacity: 0.6;
+}

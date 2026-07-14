@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ポート開放 - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/external.css?v=4">
+</head>
+<body class="external-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">ポート開放</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card">
+      <h2 class="card-title">接続情報</h2>
+      <dl class="info-list">
+        <div class="info-item">
+          <dt>現在のLAN IP</dt>
+          <dd id="pf-lan-ip">-</dd>
+        </div>
+        <div class="info-item">
+          <dt>グローバルIP</dt>
+          <dd id="pf-public-ip">-</dd>
+        </div>
+        <div class="info-item">
+          <dt>Minecraftポート</dt>
+          <dd id="pf-mc-port">-</dd>
+        </div>
+        <div class="info-item info-item-copy">
+          <dt>接続先</dt>
+          <dd class="copy-row">
+            <span id="pf-target">-</span>
+            <button type="button" class="btn-copy" data-copy="pf-target" title="コピー">📋</button>
+          </dd>
+        </div>
+        <div class="info-item">
+          <dt>状態</dt>
+          <dd id="pf-status">-</dd>
+        </div>
+      </dl>
+      <button type="button" class="btn btn-primary external-btn" id="btn-pf-copy">コピー</button>
+      <button type="button" class="btn btn-outline external-btn" id="btn-pf-test">接続テスト</button>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">ルーター設定</h2>
+      <p class="card-label">ルーターで <strong>UDP <span id="pf-port-note">19132</span></strong> をこのサーバーへ転送してください。</p>
+      <ol class="setup-steps">
+        <li>ルーター管理画面にログインします</li>
+        <li>「ポート転送」「仮想サーバー」などの設定を開きます</li>
+        <li>プロトコル: <strong>UDP</strong></li>
+        <li>外部ポート: <strong id="pf-ext-port-step">19132</strong></li>
+        <li>転送先IP: <strong id="pf-lan-step">-</strong>（このサーバーのLAN IP）</li>
+        <li>転送先ポート: <strong id="pf-int-port-step">19132</strong></li>
+      </ol>
+      <p class="card-label warn-note">設定後、上の「接続テスト」で外部から届くか確認できます。</p>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">iPhoneでの入り方</h2>
+      <ol class="setup-steps">
+        <li>Minecraft → プレイ → サーバー → 追加</li>
+        <li>サーバー名: お好みで</li>
+        <li>サーバーアドレス: 上のグローバルIP</li>
+        <li>ポート: <strong id="pf-iphone-port">19132</strong></li>
+      </ol>
+    </section>
+  </main>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+
+  <script src="/static/portforward.js?v=1"></script>
+</body>
+</html>

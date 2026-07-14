@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アドオン - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/update.css?v=1">
+  <link rel="stylesheet" href="/static/addons.css?v=1">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">アドオン</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card">
+      <h2 class="card-title">アドオン</h2>
+      <p class="card-label" id="addons-note">すべてのワールドに適用されます。</p>
+
+      <div class="addon-dropzone" id="addon-dropzone">
+        <p class="addon-drop-lead">ここへ</p>
+        <p class="addon-drop-types">.mcpack · .mcaddon · .zip</p>
+        <p class="addon-drop-sub">をドラッグしてください。</p>
+        <p class="addon-drop-multi">複数ファイルを同時に追加できます。</p>
+        <p class="addon-drop-or">または</p>
+        <button type="button" class="btn btn-primary" id="btn-addon-file">ファイルを選択</button>
+        <p class="card-label addon-file-hint">iPhoneではドラッグではなく「ファイルを選択」をご利用ください</p>
+      </div>
+
+      <div class="addon-toolbar">
+        <button type="button" class="btn btn-outline" id="btn-addon-rollback" hidden>元に戻す</button>
+      </div>
+
+      <div id="addon-list" class="addon-list"></div>
+
+      <section class="card addon-history-card" id="addon-history-section" hidden>
+        <h2 class="card-title">変更履歴</h2>
+        <div id="addon-history-list" class="addon-history-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="overlay" class="world-overlay" hidden>
+    <div class="world-overlay-box">
+      <div class="loading-spinner"></div>
+      <p id="overlay-msg">処理中…</p>
+    </div>
+  </div>
+
+  <input type="file" id="addon-input" class="file-input-offscreen" multiple accept=".mcpack,.mcaddon,.zip,application/zip,application/x-zip-compressed,application/octet-stream">
+
+  <div id="confirm-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="confirm-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-body" id="confirm-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="confirm-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addon-compat-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="addon-compat-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title">⚠ 互換性の確認</p>
+      <p class="dialog-body" id="addon-compat-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="addon-compat-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="addon-compat-ok">続行</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addon-delete-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="addon-delete-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title" id="addon-delete-title">アドオンを削除</p>
+      <p class="dialog-body" id="addon-delete-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="addon-delete-cancel">キャンセル</button>
+        <button type="button" class="btn btn-stop" id="addon-delete-ok">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addon-restart-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="addon-restart-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title">サーバー再起動</p>
+      <p class="dialog-body">設定を反映するためMinecraftサーバーを再起動します。現在接続中のプレイヤーは切断されます。</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="addon-restart-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="addon-restart-ok">再起動</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addon-apply-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="addon-apply-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title">アドオンを適用します</p>
+      <p class="dialog-body">すべてのワールドは自動バックアップされます。サーバー再起動後に反映されます。問題が発生した場合は「元に戻す」から復元できます。</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="addon-apply-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="addon-apply-ok">適用</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addon-result-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="addon-result-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title" id="addon-result-title">適用完了</p>
+      <p class="dialog-body" id="addon-result-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-primary" id="addon-result-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+  <script src="/static/addons.js?v=1"></script>
+</body>
+</html>

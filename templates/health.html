@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>システム診断 - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/update.css?v=1">
+  <link rel="stylesheet" href="/static/health.css?v=2">
+</head>
+<body class="health-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">システム診断</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <section class="card" id="start-card">
+      <h2 class="card-title">システム診断</h2>
+      <p class="card-label">現在の状態を確認します。サーバーがおかしいと感じたときにご利用ください。</p>
+      <button type="button" class="btn btn-primary health-btn" id="btn-start-check">診断開始</button>
+      <button type="button" class="btn btn-outline health-btn" id="btn-qa-check">出荷前テスト</button>
+    </section>
+
+    <section class="card" id="progress-card" hidden>
+      <h2 class="card-title" id="progress-title">診断中…</h2>
+      <div class="health-progress-track">
+        <div class="health-progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="health-check-list" id="live-check-list"></div>
+    </section>
+
+    <section class="card" id="result-card" hidden>
+      <h2 class="card-title">診断完了</h2>
+      <div class="health-overall" id="overall-box">
+        <span class="overall-icon" id="overall-icon">🟢</span>
+        <span class="overall-text" id="overall-text">問題ありません</span>
+      </div>
+      <div class="health-check-list" id="result-check-list"></div>
+      <button type="button" class="btn btn-outline health-btn" id="btn-copy-report">診断レポートをコピー</button>
+      <button type="button" class="btn btn-primary health-btn" id="btn-rerun">もう一度診断</button>
+    </section>
+
+    <section class="card qa-result-card" id="qa-result-card" hidden>
+      <div class="qa-pass-box" id="qa-pass-box">
+        <p class="qa-pass-title">品質確認</p>
+        <p class="qa-pass-status" id="qa-pass-status">PASS</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="detail-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="detail-backdrop"></div>
+    <div class="sheet-panel">
+      <h3 class="detail-sheet-title" id="detail-title"></h3>
+      <p class="detail-status" id="detail-status"></p>
+      <p class="detail-body" id="detail-body"></p>
+      <p class="detail-remedy-title">対処方法</p>
+      <p class="detail-remedy" id="detail-remedy"></p>
+      <button type="button" class="btn btn-outline health-btn" id="detail-copy">この内容をコピー</button>
+      <button type="button" class="btn btn-primary health-btn" id="detail-close">閉じる</button>
+    </div>
+  </div>
+
+  <div id="report-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="report-backdrop"></div>
+    <div class="sheet-panel report-sheet-panel">
+      <h3 class="detail-sheet-title">診断レポート</h3>
+      <p class="card-label">コピーできない場合は、下のテキストを長押しして選択してください。</p>
+      <textarea id="report-text" class="report-textarea" readonly></textarea>
+      <button type="button" class="btn btn-primary health-btn" id="report-copy-retry">コピーする</button>
+      <button type="button" class="btn btn-outline health-btn" id="report-close">閉じる</button>
+    </div>
+  </div>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+
+  <script src="/static/health.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>リモートサポート - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/update.css?v=1">
+  <link rel="stylesheet" href="/static/support.css?v=1">
+</head>
+<body class="support-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">リモートサポート</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+
+    <div id="support-notice" class="support-notice" hidden>
+      <span id="support-notice-text"></span>
+    </div>
+
+    <section class="card">
+      <h2 class="card-title">リモートサポート</h2>
+      <dl class="support-status-grid">
+        <div class="support-row">
+          <dt>現在</dt>
+          <dd><span id="support-state" class="support-pill off">OFF</span></dd>
+        </div>
+        <div class="support-row" id="row-remaining" hidden>
+          <dt>残り時間</dt>
+          <dd id="support-remaining">-</dd>
+        </div>
+        <div class="support-row" id="row-connected" hidden>
+          <dt>接続中</dt>
+          <dd id="support-connected">なし</dd>
+        </div>
+        <div class="support-row" id="row-ip" hidden>
+          <dt>Tailscale IP</dt>
+          <dd id="support-ip">-</dd>
+        </div>
+      </dl>
+
+      <button type="button" class="btn btn-primary support-btn" id="btn-enable">有効にする</button>
+      <button type="button" class="btn btn-stop support-btn" id="btn-disable" hidden>無効にする</button>
+      <button type="button" class="btn btn-outline support-btn" id="btn-change-time" hidden>有効時間を変更</button>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">履歴</h2>
+      <div id="history-list" class="support-history">
+        <p class="card-label">履歴はありません</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="confirm-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="confirm-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title">リモートサポートを有効にします</p>
+      <p class="dialog-body">有効中はサポート担当者がこのサーバーへ接続できます。<br><br>終了後は無効にしてください。<br><br>接続を許可しますか？</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="confirm-ok">許可する</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="duration-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="duration-backdrop"></div>
+    <div class="sheet-panel">
+      <p class="dialog-title">有効時間を選択</p>
+      <button type="button" class="sheet-option" data-duration="1h">1時間</button>
+      <button type="button" class="sheet-option" data-duration="24h">24時間</button>
+      <button type="button" class="sheet-option warn-option" data-duration="unlimited">無期限（非推奨）</button>
+    </div>
+  </div>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+
+  <script src="/static/support.js?v=1"></script>
+</body>
+</html>
