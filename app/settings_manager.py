@@ -5,7 +5,7 @@ from pathlib import Path
 
 PROPERTIES_PATH = Path("/opt/minecraft/server.properties")
 
-# Keys on /settings — server-wide only (per-world keys live on the world settings screen).
+# Server-wide property keys (per-world keys live on the world settings screen).
 UI_SECTIONS = [
     {
         "id": "server",
@@ -68,13 +68,6 @@ FUTURE_EXTENSIONS = [
         "label": {"ja": "権限設定", "en": "Permissions"},
         "source": "permissions.json",
         "enabled": False,
-    },
-    {
-        "id": "backup",
-        "label": {"ja": "バックアップ", "en": "Backups"},
-        "source": "backup",
-        "enabled": False,
-        "route": "/backups",
     },
     {
         "id": "discord",

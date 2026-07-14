@@ -463,7 +463,7 @@ def check_server_properties():
                 "pass",
                 "設定ファイルを読み込めます",
                 detail="server.properties は正常に読み込めました。",
-                remedy="設定画面から内容を確認できます。",
+                remedy="ワールド管理からワールド設定を確認できます。",
                 value="PASS",
             )
     return _result(
@@ -772,7 +772,7 @@ def check_qa_settings():
             "pass",
             "設定ファイルは保持されています",
             detail="server.properties を読み込み・保存できます。",
-            remedy="設定画面で変更が反映されることを確認してください。",
+            remedy="設定ファイルへの変更が反映されることを確認してください。",
             value="PASS",
         )
     return _result(

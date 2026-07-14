@@ -12,29 +12,20 @@ from flask import Flask, jsonify, render_template, request
 from app.port_check_manager import get_external_port_status, run_external_port_check
 
 from app.update_manager import (
-    delete_backup,
-    get_backup_archive_path,
     get_installed_version,
     get_update_info,
     get_update_status,
-    list_backups,
-    restore_backup,
     start_update,
 )
 
 from app.settings_manager import (
-    build_settings_response,
-    get_visible_fields_by_key,
     read_properties as read_server_properties,
-    settings_to_updates,
     write_properties,
 )
 
 from app.health_check_manager import (
     build_report_meta,
-    build_report_text,
     get_check_definitions,
-    run_all_checks,
     run_check,
 )
 
@@ -47,9 +38,7 @@ from app.support_manager import (
 
 from app.playit_manager import (
     create_playit_tunnel,
-    disable_playit,
     disconnect_playit,
-    enable_playit,
     get_bedrock_local_port,
     get_playit_status,
     start_playit_login,
@@ -63,7 +52,6 @@ from app.world_manager import (
     delete_world,
     delete_world_backup,
     export_world_path,
-    get_current_world,
     get_dashboard_world,
     get_world,
     get_world_settings,
@@ -78,10 +66,8 @@ from app.world_manager import (
 )
 
 from app.addon_manager import (
-    analyze_addon_upload,
     delete_addon,
     get_addon_state,
-    install_addon,
     restart_server_for_addons,
     rollback_addons,
     set_addon_enabled,
@@ -97,7 +83,6 @@ from app.reset_manager import (
 
 from app.discord_manager import (
     get_bedrock_uptime_label,
-    get_discord_dashboard_status,
     get_discord_status,
     get_online_player_count,
     get_online_players,
@@ -433,10 +418,6 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/settings")
-def settings_page():
-    return render_template("settings.html")
-
 
 @app.route("/reset")
 def reset_page():
@@ -486,42 +467,16 @@ def portforward_page():
     return render_template("portforward.html")
 
 
-@app.route("/api/settings", methods=["GET"])
-def api_settings_get():
-    try:
-        return jsonify(build_settings_response())
-    except OSError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
-
-@app.route("/api/settings", methods=["POST"])
-def api_settings_post():
-    try:
-        data = request.get_json(force=True, silent=True)
-        if not data or not isinstance(data, dict):
-            return jsonify({"success": False, "message": "Invalid JSON"}), 400
-
-        _, allowed_keys = read_server_properties()
-        fields_by_key = get_visible_fields_by_key()
-        updates = settings_to_updates(data, set(allowed_keys.keys()), fields_by_key)
-        if not updates:
-            return jsonify({"success": False, "message": "No valid properties to save"}), 400
-        write_properties(updates)
-        return jsonify({"success": True, "message": "Settings saved"})
-    except (OSError, ValueError, TypeError) as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
-
-
 
 @app.route("/update")
 def update_page():
     return render_template("update.html")
 
 
-@app.route("/backups")
-def backups_page():
-    return render_template("backups.html")
+
+@app.route("/logs")
+def logs_page():
+    return render_template("logs.html")
 
 
 @app.route("/health")
@@ -544,18 +499,6 @@ def api_health_check(check_id):
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
-@app.route("/api/health/run")
-def api_health_run():
-    mode = request.args.get("mode", "normal")
-    if mode not in ("normal", "qa"):
-        mode = "normal"
-    try:
-        report = run_all_checks(mode)
-        report["report_text"] = build_report_text(report)
-        return jsonify(report)
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
 
 
 @app.route("/api/health/meta")
@@ -691,27 +634,6 @@ def api_playit_test():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-@app.route("/api/playit/enable", methods=["POST"])
-def api_playit_enable():
-    try:
-        ok, msg = enable_playit()
-        if ok:
-            return jsonify({"success": True, "message": msg})
-        return jsonify({"success": False, "message": msg}), 400
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
-
-@app.route("/api/playit/disable", methods=["POST"])
-def api_playit_disable():
-    try:
-        ok, msg = disable_playit()
-        if ok:
-            return jsonify({"success": True, "message": msg})
-        return jsonify({"success": False, "message": msg}), 400
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
 
 @app.route("/api/playit/create-tunnel", methods=["POST"])
 def api_playit_create_tunnel():
@@ -765,43 +687,6 @@ def api_update_start():
     return jsonify({"success": False, "message": msg}), 400
 
 
-@app.route("/api/backups")
-def api_backups_list():
-    try:
-        return jsonify({"backups": list_backups()})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
-
-@app.route("/api/backups/<backup_id>/restore", methods=["POST"])
-def api_backups_restore(backup_id):
-    try:
-        restore_backup(backup_id)
-        return jsonify({"success": True, "message": "Backup restored"})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
-
-@app.route("/api/backups/<backup_id>/download")
-def api_backups_download(backup_id):
-    from flask import send_file
-    from app.update_manager import _backup_archive_path
-    try:
-        path = _backup_archive_path(backup_id)
-        if not path.exists():
-            return jsonify({"success": False, "message": "Not found"}), 404
-        return send_file(path, as_attachment=True, download_name=path.name)
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
-
-@app.route("/api/backups/<backup_id>", methods=["DELETE"])
-def api_backups_delete(backup_id):
-    try:
-        delete_backup(backup_id)
-        return jsonify({"success": True, "message": "Deleted"})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
 
 @app.route("/api/system")
 def api_system():
@@ -931,13 +816,6 @@ def api_worlds_list():
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
-@app.route("/api/worlds/current")
-def api_worlds_current():
-    try:
-        return jsonify(get_current_world())
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
 
 
 @app.route("/api/worlds/<world_id>")
@@ -1179,6 +1057,17 @@ def api_addons_get():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
+def _save_addon_uploads(_unused, uploads):
+    saved = []
+    for upload in uploads:
+        if not upload or not upload.filename:
+            continue
+        tmp = Path("/opt/appliance/work") / f"addon-upload-{os.getpid()}-{upload.filename}"
+        upload.save(tmp)
+        saved.append((tmp, upload.filename))
+    return saved
+
+
 @app.route("/api/addons/upload", methods=["POST"])
 def api_addons_upload():
     try:
@@ -1251,144 +1140,6 @@ def api_addons_restart():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-@app.route("/api/worlds/<world_id>/addons")
-def api_world_addons_get(world_id):
-    try:
-        return jsonify({"success": True, **get_addon_state()})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
-
-@app.route("/api/worlds/<world_id>/addons/analyze", methods=["POST"])
-def api_world_addons_analyze(world_id):
-    try:
-        upload = request.files.get("file")
-        if not upload or not upload.filename:
-            return jsonify({"success": False, "message": "ファイルを選択してください"}), 400
-        tmp = Path("/opt/appliance/work") / f"addon-upload-{_now_label().replace(' ', '-').replace(':', '')}-{upload.filename}"
-        upload.save(tmp)
-        try:
-            result = analyze_addon_upload(tmp, upload.filename)
-            return jsonify({"success": True, **result})
-        finally:
-            tmp.unlink(missing_ok=True)
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
-
-
-def _save_addon_uploads(_unused, uploads):
-    saved = []
-    for upload in uploads:
-        if not upload or not upload.filename:
-            continue
-        tmp = Path("/opt/appliance/work") / f"addon-upload-{os.getpid()}-{upload.filename}"
-        upload.save(tmp)
-        saved.append((tmp, upload.filename))
-    return saved
-
-
-@app.route("/api/worlds/<world_id>/addons/upload", methods=["POST"])
-def api_world_addons_upload(world_id):
-    try:
-        uploads = request.files.getlist("files") or request.files.getlist("file")
-        uploads = [u for u in uploads if u and u.filename]
-        force = request.form.get("force", "").lower() in ("1", "true", "yes")
-        if not uploads:
-            return jsonify({"success": False, "message": "ファイルを選択してください"}), 400
-        saved = _save_addon_uploads(world_id, uploads)
-        try:
-            ok, result = upload_addons(saved, force=force)
-            if not ok:
-                return jsonify({"success": False, **result}), 409
-            return jsonify({"success": True, **result})
-        finally:
-            for tmp, _name in saved:
-                tmp.unlink(missing_ok=True)
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
-
-
-@app.route("/api/worlds/<world_id>/addons/install", methods=["POST"])
-def api_world_addons_install(world_id):
-    try:
-        uploads = request.files.getlist("files") or request.files.getlist("file")
-        if not uploads or not any(u and u.filename for u in uploads):
-            single = request.files.get("file")
-            uploads = [single] if single and single.filename else []
-        uploads = [u for u in uploads if u and u.filename]
-        force = request.form.get("force", "").lower() in ("1", "true", "yes")
-        restart = request.form.get("restart", "").lower() in ("1", "true", "yes")
-        if not uploads:
-            return jsonify({"success": False, "message": "ファイルを選択してください"}), 400
-        saved = _save_addon_uploads(world_id, uploads)
-        try:
-            ok, result = upload_addons(saved, force=force)
-            if not ok:
-                return jsonify({"success": False, **result}), 409
-            if restart:
-                ok2, result2 = restart_server_for_addons()
-                if isinstance(result2, dict):
-                    result.update(result2)
-                else:
-                    result["message"] = result2
-                if not ok2:
-                    return jsonify({"success": False, **result}), 400
-            return jsonify({"success": True, **result})
-        finally:
-            for tmp, _name in saved:
-                tmp.unlink(missing_ok=True)
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
-
-
-@app.route("/api/worlds/<world_id>/addons/toggle", methods=["POST"])
-def api_world_addons_toggle(world_id):
-    try:
-        data = request.get_json(force=True, silent=True) or {}
-        pack_id = data.get("pack_id")
-        enabled = bool(data.get("enabled"))
-        restart = bool(data.get("restart"))
-        if not pack_id:
-            return jsonify({"success": False, "message": "pack_id が必要です"}), 400
-        ok, result = set_addon_enabled(pack_id, enabled, restart=restart)
-        return jsonify({"success": ok, **result})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
-
-
-@app.route("/api/worlds/<world_id>/addons/delete", methods=["POST"])
-def api_world_addons_delete(world_id):
-    try:
-        data = request.get_json(force=True, silent=True) or {}
-        pack_id = data.get("pack_id")
-        restart = bool(data.get("restart"))
-        if not pack_id:
-            return jsonify({"success": False, "message": "pack_id が必要です"}), 400
-        ok, result = delete_addon(pack_id, restart=restart)
-        return jsonify({"success": ok, **result})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
-
-
-@app.route("/api/worlds/<world_id>/addons/rollback", methods=["POST"])
-def api_world_addons_rollback(world_id):
-    try:
-        data = request.get_json(force=True, silent=True) or {}
-        restart = bool(data.get("restart"))
-        ok, result = rollback_addons(restart=restart)
-        return jsonify({"success": ok, **result})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
-
-
-@app.route("/api/worlds/<world_id>/addons/restart", methods=["POST"])
-def api_world_addons_restart(world_id):
-    try:
-        ok, msg = restart_server_for_addons()
-        return jsonify({"success": ok, "message": msg})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-
 
 @app.route("/api/log")
 def api_log():
@@ -1408,8 +1159,6 @@ def _build_dashboard_payload():
         "external": external,
         "minecraft": api_minecraft().get_json(),
         "players": get_player_home_summary(),
-        "discord": get_discord_dashboard_status(),
-        "log": api_log().get_json(),
     }
 
 

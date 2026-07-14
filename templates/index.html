@@ -4,9 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Craft Server</title>
-  <link rel="stylesheet" href="/static/style.css?v=4">
+  <link rel="stylesheet" href="/static/style.css?v=6">
   <link rel="stylesheet" href="/static/worlds.css?v=1">
-  <link rel="stylesheet" href="/static/discord.css?v=1">
   <link rel="stylesheet" href="/static/players.css?v=1">
 </head>
 <body>
@@ -30,16 +29,6 @@
 
   <main class="container">
     {% include '_nav.html' %}
-    <section class="card card-highlight">
-      <div class="card-row">
-        <div>
-          <h2 class="card-title">製品情報</h2>
-          <p class="card-label">製品ID</p>
-          <p class="card-value-lg" id="product-id">-</p>
-        </div>
-      </div>
-    </section>
-
     <section class="card">
       <h2 class="card-title">サーバー状態</h2>
       <div class="status-row">
@@ -51,7 +40,6 @@
         <button type="button" class="btn btn-start" id="btn-start">開始</button>
         <button type="button" class="btn btn-stop" id="btn-stop">停止</button>
         <button type="button" class="btn btn-restart" id="btn-restart">再起動</button>
-        <button type="button" class="btn btn-primary" id="btn-scroll-log">ログを見る</button>
       </div>
     </section>
 
@@ -135,24 +123,7 @@
     </section>
 
     <section class="card">
-      <h2 class="card-title">メンテナンス</h2>
-      <div class="btn-row" style="flex-direction:column;">
-        <a href="/settings" class="btn btn-outline" style="text-align:center;text-decoration:none;">サーバー名変更</a>
-        <a href="/external" class="btn btn-outline" style="text-align:center;text-decoration:none;">外部接続</a>
-        <a href="/update" class="btn btn-outline" style="text-align:center;text-decoration:none;">アップデート</a>
-        <a href="/addons" class="btn btn-outline" style="text-align:center;text-decoration:none;">アドオン</a>
-        <a href="/reset" class="btn btn-outline" style="text-align:center;text-decoration:none;">リセット</a>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2 class="card-title">Minecraft</h2>
-      <dl class="info-list">
-        <div class="info-item"><dt>サーバー名</dt><dd id="mc-server-name">-</dd></div>
-        <div class="info-item"><dt>現在人数</dt><dd id="mc-players">-</dd></div>
-        <div class="info-item"><dt>バージョン</dt><dd id="mc-version">-</dd></div>
-        <div class="info-item"><dt>稼働時間</dt><dd id="mc-uptime">-</dd></div>
-      </dl>
+      <button type="button" class="btn btn-outline maintenance-open-btn" id="btn-maintenance">メンテナンス</button>
     </section>
 
     <section class="card">
@@ -165,36 +136,28 @@
         <div class="info-item"><dt>OSバージョン</dt><dd id="sys-os">-</dd></div>
       </dl>
     </section>
-
-    <section class="card">
-      <h2 class="card-title">システム診断</h2>
-      <p class="card-label">現在の状態を確認します。</p>
-      <a href="/health" class="btn btn-primary" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">診断開始</a>
-    </section>
-
-    <section class="card" id="discord-card-mini">
-      <h2 class="card-title">Discord</h2>
-      <p class="card-label">通知</p>
-      <p><span id="discord-status-pill" class="discord-pill-mini off">未設定</span></p>
-      <a href="/discord" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">設定</a>
-    </section>
-
-    <section class="card" id="support-card">
-      <h2 class="card-title">サポート</h2>
-      <p class="card-label">リモートサポート</p>
-      <p><span id="support-status-pill" class="support-pill-mini off">OFF</span></p>
-      <a href="/support" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;text-decoration:none;display:inline-block;box-sizing:border-box;">詳細</a>
-    </section>
-
-    <section class="card" id="log-section">
-      <h2 class="card-title">ログ <span class="badge">最新10件</span></h2>
-      <pre class="log-box" id="log-box">読み込み中...</pre>
-    </section>
   </main>
 
   <footer class="footer">
     <p>my-craft-server &copy; My Craft Server</p>
   </footer>
+
+  <div id="maintenance-sheet" class="sheet-center" hidden>
+    <div class="sheet-backdrop" id="maintenance-backdrop"></div>
+    <div class="sheet-panel maintenance-sheet-panel">
+      <h2 class="card-title" style="margin-bottom:16px;">メンテナンス</h2>
+      <div class="maintenance-menu">
+        <a href="/update" class="btn btn-outline maintenance-menu-btn">アップデート</a>
+        <a href="/addons" class="btn btn-outline maintenance-menu-btn">アドオン</a>
+        <a href="/reset" class="btn btn-outline maintenance-menu-btn">リセット</a>
+        <a href="/support" class="btn btn-outline maintenance-menu-btn">サポート</a>
+        <a href="/health" class="btn btn-outline maintenance-menu-btn">システム診断</a>
+        <a href="/discord" class="btn btn-outline maintenance-menu-btn">Discord</a>
+        <a href="/logs" class="btn btn-outline maintenance-menu-btn">ログ</a>
+      </div>
+      <button type="button" class="btn btn-secondary maintenance-menu-btn" id="maintenance-close" style="margin-top:12px;">閉じる</button>
+    </div>
+  </div>
 
   <!-- 確認ダイアログ（初期状態: 完全非表示） -->
   <div id="confirm-modal" class="modal" hidden>
@@ -208,6 +171,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=8"></script>
+  <script src="/static/app.js?v=13"></script>
 </body>
 </html>

@@ -129,12 +129,3 @@
 .discord-snackbar[hidden] {
   display: none !important;
 }
-
-#discord-card-mini .discord-pill-mini.on {
-  background: var(--green-light);
-  color: var(--green-dark);
-}
-
-#discord-card-mini .discord-pill-mini.off {
-  color: var(--text-sub);
-}

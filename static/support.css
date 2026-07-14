@@ -182,21 +182,3 @@
 .snackbar.warn {
   background: var(--orange);
 }
-
-#support-card .support-pill-mini {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-#support-card .support-pill-mini.on {
-  background: var(--green-light);
-  color: var(--green-dark);
-}
-
-#support-card .support-pill-mini.off {
-  background: #F2F2F7;
-  color: var(--text-sub);
-}

@@ -112,19 +112,6 @@ async function copyText(elementId) {
   showToast('コピーしました', false);
 }
 
-async function fetchSupportStatus() {
-  try {
-    const res = await fetch('/api/support', { cache: 'no-store' });
-    if (!res.ok) return;
-    const data = await res.json();
-    const pill = document.getElementById('support-status-pill');
-    if (!pill) return;
-    const on = !!data.enabled;
-    pill.textContent = on ? 'ON' : 'OFF';
-    pill.className = 'support-pill-mini ' + (on ? 'on' : 'off');
-  } catch (e) { /* ignore */ }
-}
-
 function capMode(s) {
   if (!s || s === '-') return '-';
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -160,9 +147,6 @@ function updateDashboard(data) {
   const lan = data.lan;
   const external = data.external;
   const minecraft = data.minecraft;
-  const log = data.log;
-
-  document.getElementById('product-id').textContent = system.product_id || '-';
 
   const running = server.status === 'running';
   setStatusDot(document.getElementById('header-dot'), running);
@@ -201,19 +185,6 @@ function updateDashboard(data) {
     }
   }
 
-  document.getElementById('mc-players').textContent =
-    minecraft.players_online + ' / ' + minecraft.players_max;
-  document.getElementById('mc-server-name').textContent = minecraft.server_name || '-';
-
-  const mcVersionEl = document.getElementById('mc-version');
-  if (mcVersionEl) {
-    mcVersionEl.textContent = minecraft.bedrock_version || '-';
-  }
-  const mcUptimeEl = document.getElementById('mc-uptime');
-  if (mcUptimeEl) {
-    mcUptimeEl.textContent = minecraft.server_uptime || '-';
-  }
-
   const iconEl = document.getElementById('home-world-icon');
   const nameEl = document.getElementById('home-world-name');
   const metaEl = document.getElementById('home-world-meta');
@@ -240,16 +211,6 @@ function updateDashboard(data) {
   document.getElementById('sys-disk').textContent = system.disk;
   document.getElementById('sys-uptime').textContent = system.uptime;
   document.getElementById('sys-os').textContent = system.os;
-
-  const logBox = document.getElementById('log-box');
-  logBox.textContent = (log.logs && log.logs.length > 0)
-    ? log.logs.join('\n') : 'ログがありません';
-
-  const discordPill = document.getElementById('discord-status-pill');
-  if (discordPill && data.discord) {
-    discordPill.textContent = data.discord.status || '未設定';
-    discordPill.className = 'discord-pill-mini ' + (data.discord.status_class || 'off');
-  }
 }
 
 async function fetchServerStatusQuick() {
@@ -276,6 +237,28 @@ async function fetchDashboard() {
   }
 }
 
+function initMaintenanceSheet() {
+  const sheet = document.getElementById('maintenance-sheet');
+  const openBtn = document.getElementById('btn-maintenance');
+  const backdrop = document.getElementById('maintenance-backdrop');
+  const closeBtn = document.getElementById('maintenance-close');
+  if (!sheet || !openBtn) return;
+
+  function openSheet() {
+    sheet.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSheet() {
+    sheet.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  openBtn.addEventListener('click', openSheet);
+  if (backdrop) backdrop.addEventListener('click', closeSheet);
+  if (closeBtn) closeBtn.addEventListener('click', closeSheet);
+}
+
 function initApp() {
   document.getElementById('btn-start').addEventListener('click', function () {
     serverAction('start', 'Minecraftサーバーを開始しますか？');
@@ -286,9 +269,6 @@ function initApp() {
   document.getElementById('btn-restart').addEventListener('click', function () {
     serverAction('restart', 'Minecraftサーバーを再起動しますか？');
   });
-  document.getElementById('btn-scroll-log').addEventListener('click', function () {
-    document.getElementById('log-section').scrollIntoView({ behavior: 'smooth' });
-  });
 
   document.querySelectorAll('.btn-copy').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -298,9 +278,8 @@ function initApp() {
 
   fetchServerStatusQuick();
   fetchDashboard();
-  setTimeout(fetchSupportStatus, 1500);
   setInterval(fetchDashboard, POLL_INTERVAL);
-  setInterval(fetchSupportStatus, POLL_INTERVAL);
+  initMaintenanceSheet();
 }
 
 if (document.readyState === 'loading') {

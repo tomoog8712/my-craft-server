@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ログ - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=4">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">ログ</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% include '_nav.html' %}
+
+    <section class="card">
+      <h2 class="card-title">ログ <span class="badge">最新10件</span></h2>
+      <p class="card-label">Minecraft サーバーの直近ログです。</p>
+      <pre class="log-box" id="log-box">読み込み中...</pre>
+      <button type="button" class="btn btn-outline" id="btn-refresh" style="width:100%;margin-top:12px;">更新</button>
+    </section>
+  </main>
+
+  <script src="/static/logs.js?v=1"></script>
+</body>
+</html>
