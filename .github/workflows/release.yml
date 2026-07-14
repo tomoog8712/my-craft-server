@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release notes
+        id: notes
+        run: |
+          BODY="$(./scripts/extract-changelog.sh "${{ steps.ver.outputs.version }}")"
+          if [[ -z "$BODY" ]]; then
+            BODY="Release ${{ steps.ver.outputs.tag }}"
+          fi
+          {
+            echo "body<<EOF"
+            echo "$BODY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: My Craft Server Web UI ${{ steps.ver.outputs.tag }}
+          body: ${{ steps.notes.outputs.body }}
+          draft: false
+          prerelease: false
+          generate_release_notes: false

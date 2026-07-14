@@ -1,0 +1,12 @@
+# <type>(<scope>): <summary>
+#
+# type: feat | fix | docs | chore | refactor | test
+# scope: players | worlds | settings | external | release など
+#
+# 例:
+#   feat(players): BANリストに削除済みプレイヤーを表示
+#   fix(worlds): 詳細モードをデフォルトに変更
+#   chore(release): bump version to 1.0.1
+#
+# 変更履歴:
+#   ./scripts/changelog-add.sh added "説明"
