@@ -295,7 +295,7 @@ def _reset_server_settings(preserve_level=True):
         raise RuntimeError("初期設定テンプレートが見つかりません")
     level_name = _current_level_name() if preserve_level else ""
     _stop_and_wait()
-    shutil.copy2(DEFAULT_PROPERTIES, MINECRAFT_DIR / "server.properties")
+    shutil.copyfile(DEFAULT_PROPERTIES, MINECRAFT_DIR / "server.properties")
     props_path = MINECRAFT_DIR / "server.properties"
     content = props_path.read_text(encoding="utf-8")
     if preserve_level and level_name:

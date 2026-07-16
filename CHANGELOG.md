@@ -42,6 +42,8 @@
 
 ### Fixed
 
+- 出荷設定・リセット時の `server.properties` 初期化で `shutil.copyfile` を使用（`copy2` の chmod 失敗を回避）
+
 ### Removed
 
 ---
