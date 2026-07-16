@@ -164,10 +164,10 @@ ExecStart=/usr/bin/python3 -m gunicorn --workers 1 --bind 127.0.0.1:5000 --timeo
 Restart=on-failure
 RestartSec=5
 PrivateTmp=true
-ProtectSystem=strict
+ProtectSystem=full
 ProtectHome=true
 ReadWritePaths=/opt/appliance/web /opt/appliance/backups /opt/appliance/data /opt/appliance/work /opt/minecraft
-ReadOnlyPaths=/etc/appliance /proc /sys
+ReadOnlyPaths=/proc /sys
 
 [Install]
 WantedBy=multi-user.target
