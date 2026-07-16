@@ -178,6 +178,8 @@ def _get_discord_webhook():
 
 
 def _has_playit_secret():
+    if (DATA_DIR / "playit-credentials-cleared").exists():
+        return False
     secret_file = DATA_DIR / "playit.toml"
     if secret_file.exists():
         text = _read_file(secret_file)
@@ -187,7 +189,8 @@ def _has_playit_secret():
         ["/opt/appliance/bin/playit-status.sh", "secret"],
         timeout=8,
     )
-    return code == 0 and bool(out.strip())
+    secret = (out or "").strip()
+    return code == 0 and secret not in ("", "NONE")
 
 
 def _factory_clone_artifacts():
