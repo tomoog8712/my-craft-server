@@ -1114,12 +1114,33 @@ def restart_server_for_addons():
     return True, "サーバーを再起動しました"
 
 
+def _has_addon_content(reg=None):
+    """Return True when installed packs or on-disk addon artifacts exist."""
+    reg = reg if reg is not None else _load_registry_data()
+    if reg.get("packs"):
+        return True
+    packs_dir = _packs_dir()
+    if packs_dir.is_dir() and any(packs_dir.iterdir()):
+        return True
+    backup_dir = _backup_dir()
+    if backup_dir.is_dir() and any(backup_dir.iterdir()):
+        return True
+    return False
+
+
 def reset_all_addons(restart=True):
     """Remove all add-ons and reset registry, history, and backups."""
     with _lock:
         _ensure_initialized()
-        active = _is_server_active()
         reg = _load_registry_data()
+        if not _has_addon_content(reg):
+            _packs_dir().mkdir(parents=True, exist_ok=True)
+            _backup_dir().mkdir(parents=True, exist_ok=True)
+            _save_registry_data(_default_registry())
+            _save_history(_default_history())
+            return
+
+        active = _is_server_active()
 
         for pack in reg.get("packs", []):
             for kind in ("behavior", "resource"):

@@ -497,7 +497,7 @@ def run_shipment_init_step(step_id):
         "worlds": lambda: _reset_worlds(restart=False),
         "server_settings": lambda: _reset_server_settings(preserve_level=False),
         "players": _reset_players,
-        "addons": _reset_addons,
+        "addons": lambda: reset_all_addons(restart=False),
         "discord": _reset_discord,
         "playit": _reset_playit,
         "webui": _reset_webui,
