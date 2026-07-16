@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>出荷設定 - My Craft Server</title>
+  <link rel="stylesheet" href="/static/style.css?v=6">
+  <link rel="stylesheet" href="/static/health.css?v=2">
+  <link rel="stylesheet" href="/static/shipment.css?v=1">
+</head>
+<body class="shipment-page health-page">
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⛏</span>
+        <div>
+          <h1>My Craft Server</h1>
+          <p class="subtitle">出荷設定</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card" id="auth-card">
+      <h2 class="card-title">出荷設定</h2>
+      <p class="card-label">パスワードを入力して初期化を開始します。</p>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" class="shipment-code-input" id="shipment-password" placeholder="パスワード" autocomplete="off">
+      <p class="shipment-error" id="auth-error" hidden></p>
+      <button type="button" class="btn btn-primary health-btn" id="btn-auth-start">開始</button>
+    </section>
+
+    <section class="card" id="progress-card" hidden>
+      <h2 class="card-title" id="progress-title">初期化中…</h2>
+      <div class="health-progress-track">
+        <div class="health-progress-bar" id="progress-bar"></div>
+      </div>
+      <p class="shipment-status-text" id="progress-status"></p>
+      <div class="health-check-list" id="step-list"></div>
+    </section>
+
+    <section class="card shipment-message-card" id="message-card" hidden>
+      <p class="shipment-message" id="message-text"></p>
+    </section>
+
+    <section class="card" id="serial-card" hidden>
+      <h2 class="card-title">シリアル番号設定</h2>
+      <p class="card-label">本体ラベルに貼るシリアル番号を入力してください。台帳で割り当てた番号を使います。</p>
+      <p class="card-label">現在の値: <strong id="serial-current">-</strong></p>
+      <input type="text" class="shipment-code-input shipment-serial-input" id="shipment-serial" placeholder="MCS-000042" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <p class="shipment-error" id="serial-error" hidden></p>
+      <button type="button" class="btn btn-primary health-btn" id="btn-serial-apply">シリアルを設定して続行</button>
+    </section>
+
+    <section class="card" id="check-card" hidden>
+      <h2 class="card-title">出荷前チェック</h2>
+      <div class="health-progress-track">
+        <div class="health-progress-bar" id="check-progress-bar"></div>
+      </div>
+      <div class="health-check-list" id="check-list"></div>
+    </section>
+
+    <section class="card qa-result-card" id="result-card" hidden>
+      <div class="qa-pass-box" id="result-box">
+        <p class="qa-pass-title">出荷判定</p>
+        <p class="qa-pass-status" id="result-status">出荷可能です。</p>
+      </div>
+      <p class="shipment-error" id="result-error" hidden></p>
+      <button type="button" class="btn btn-outline health-btn" id="btn-back-home">ダッシュボードへ</button>
+    </section>
+  </main>
+
+  <div id="snackbar" class="snackbar" hidden></div>
+  <script src="/static/shipment.js?v=2"></script>
+</body>
+</html>

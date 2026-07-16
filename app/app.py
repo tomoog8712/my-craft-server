@@ -29,6 +29,15 @@ from app.health_check_manager import (
     run_check,
 )
 
+from app.shipment_manager import (
+    authenticate as shipment_authenticate,
+    execute_finalize as shipment_finalize,
+    execute_init_step as shipment_init_step,
+    execute_serial_update as shipment_serial_update,
+    get_current_serial,
+    get_init_step_definitions,
+)
+
 from app.support_manager import (
     disable_support,
     enable_support,
@@ -44,7 +53,6 @@ from app.playit_manager import (
     start_playit_login,
     test_playit_connection,
 )
-
 from app.world_manager import (
     copy_world,
     create_world,
@@ -117,6 +125,9 @@ app = Flask(
     template_folder=str(BASE_DIR / "templates"),
     static_folder=str(BASE_DIR / "static"),
 )
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+app.jinja_env.auto_reload = True
 
 
 def run_cmd(cmd, timeout=5):
@@ -482,6 +493,67 @@ def logs_page():
 @app.route("/health")
 def health_page():
     return render_template("health.html")
+
+
+@app.route("/shipment")
+def shipment_page():
+    return render_template("shipment.html")
+
+
+@app.route("/api/shipment/auth", methods=["POST"])
+def api_shipment_auth():
+    try:
+        data = request.get_json(silent=True) or {}
+        ok, msg = shipment_authenticate(data.get("password", ""))
+        return jsonify({"success": ok, "message": msg})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/shipment/steps")
+def api_shipment_steps():
+    try:
+        return jsonify({
+            "success": True,
+            "steps": get_init_step_definitions(),
+            "current_serial": get_current_serial(),
+        })
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/shipment/init/<step_id>", methods=["POST"])
+def api_shipment_init_step(step_id):
+    try:
+        ok, msg = shipment_init_step(step_id)
+        if not ok:
+            return jsonify({"success": False, "message": msg}), 403
+        return jsonify({"success": True, "message": msg})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/shipment/serial", methods=["POST"])
+def api_shipment_serial():
+    try:
+        data = request.get_json(silent=True) or {}
+        ok, msg, serial = shipment_serial_update(data.get("serial", ""))
+        if not ok:
+            return jsonify({"success": False, "message": msg}), 400
+        return jsonify({"success": True, "message": msg, "serial": serial})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/shipment/finalize", methods=["POST"])
+def api_shipment_finalize():
+    try:
+        ok, msg = shipment_finalize()
+        if not ok:
+            return jsonify({"success": False, "message": msg}), 400
+        return jsonify({"success": True, "message": msg})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
 
 
 @app.route("/api/health/definitions")

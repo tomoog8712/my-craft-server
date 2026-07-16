@@ -1,0 +1,47 @@
+.shipment-page .container {
+  padding-bottom: 32px;
+}
+
+.shipment-code-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 48px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  text-align: center;
+}
+
+.shipment-error {
+  color: #d70015;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.shipment-status-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.shipment-message-card {
+  text-align: center;
+}
+
+.shipment-message {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.shipment-page .health-check-item {
+  cursor: default;
+}
+
+.shipment-serial-input {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

@@ -259,6 +259,25 @@ function initMaintenanceSheet() {
   if (closeBtn) closeBtn.addEventListener('click', closeSheet);
 }
 
+function initOsVersionTap() {
+  const osEl = document.getElementById('sys-os');
+  if (!osEl) return;
+  let tapCount = 0;
+  let tapTimer = null;
+
+  osEl.style.cursor = 'default';
+  osEl.addEventListener('click', function () {
+    tapCount += 1;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(function () { tapCount = 0; }, 3000);
+    if (tapCount >= 15) {
+      tapCount = 0;
+      clearTimeout(tapTimer);
+      window.location.href = '/shipment';
+    }
+  });
+}
+
 function initApp() {
   document.getElementById('btn-start').addEventListener('click', function () {
     serverAction('start', 'Minecraftサーバーを開始しますか？');
@@ -280,6 +299,7 @@ function initApp() {
   fetchDashboard();
   setInterval(fetchDashboard, POLL_INTERVAL);
   initMaintenanceSheet();
+  initOsVersionTap();
 }
 
 if (document.readyState === 'loading') {

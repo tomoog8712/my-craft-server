@@ -16,7 +16,7 @@ from app.addon_manager import reset_all_addons
 from app.discord_manager import DEFAULT_EVENTS, save_event_settings, save_webhook_url
 from app.playit_manager import disconnect_playit
 from app.player_manager import reset_all_players
-from app.support_manager import is_remote_support_active
+from app.support_manager import disable_support, is_remote_support_active
 from app.update_manager import delete_backup, list_backups, wait_for_running
 from app.world_manager import WORLDS_DATA, WORLDS_DIR
 
@@ -25,6 +25,7 @@ DATA_DIR = Path("/opt/appliance/data")
 MINECRAFT_DIR = Path("/opt/minecraft")
 DEFAULT_PROPERTIES = Path("/opt/minecraft-bedrock/server.properties")
 REBOOT_SCRIPT = "/opt/appliance/bin/reset-reboot.sh"
+FACTORY_SANITIZE_SCRIPT = "/opt/appliance/bin/reset-factory-sanitize.sh"
 
 _lock = threading.Lock()
 
@@ -62,7 +63,7 @@ RESET_ITEMS = [
     {
         "id": "factory",
         "title": "すべて初期化（工場出荷時）",
-        "description": "サーバー設定・プレイヤー管理・アドオン・ワールド・バックアップ・Discord・Playit・管理画面設定を初期化します。製品IDとシステムは保持します。",
+        "description": "クローン出荷向けに、サーバー設定・プレイヤー管理・アドオン・ワールド・バックアップ・Discord・Playit・管理画面設定を初期化します。個体情報キャッシュも削除します。",
         "danger": True,
     },
 ]
@@ -145,10 +146,12 @@ PREVIEW_CONTENT = {
             "Playit設定",
             "Minecraft設定",
             "WebUI設定",
+            "クローン向け個体情報キャッシュ",
+            "内部UUIDキャッシュ",
+            "初回プロビジョニング状態",
         ],
         "kept": [
             "製品ID",
-            "UUID",
             "シリアル番号",
             "システム",
             "WebUI本体",
@@ -364,6 +367,11 @@ def _reset_addons():
 
 
 def _reset_webui():
+    # Ensure remote support is actually down, not only status files.
+    try:
+        disable_support()
+    except Exception:
+        pass
     _write_json(DATA_DIR / "external_connection.json", {
         "mode": "standard",
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -386,6 +394,14 @@ def _reset_webui():
         "connected_players": [],
         "alerts": {},
     })
+    tmp = DATA_DIR / "config-write-tmp.json"
+    tmp.unlink(missing_ok=True)
+
+
+def _reset_factory_sanitize():
+    code, out, err = _run(["sudo", "-n", FACTORY_SANITIZE_SCRIPT], timeout=120)
+    if code != 0:
+        raise RuntimeError(err or out or "クローン向け初期化に失敗しました")
 
 
 def _reset_worlds(restart=False):
@@ -438,6 +454,7 @@ def _run_factory_reset():
         ("Playit", _reset_playit),
         ("管理画面", _reset_webui),
         ("バックアップ", _reset_update_backups),
+        ("クローン初期化", _reset_factory_sanitize),
     ]
     for label, step in steps:
         try:
@@ -449,6 +466,46 @@ def _run_factory_reset():
     except Exception as exc:
         errors.append(f"再起動: {exc}")
     return errors
+
+
+SHIPMENT_INIT_STEPS = [
+    ("support_off", "リモートサポート停止"),
+    ("worlds", "ワールド削除"),
+    ("server_settings", "サーバー設定初期化"),
+    ("players", "プレイヤー管理初期化"),
+    ("addons", "アドオン初期化"),
+    ("discord", "Discord初期化"),
+    ("playit", "Playit初期化"),
+    ("webui", "管理画面設定初期化"),
+    ("backups", "バックアップ削除"),
+    ("sanitize", "クローン残骸削除"),
+]
+
+
+def _shipment_disable_support():
+    try:
+        disable_support()
+    except Exception:
+        pass
+
+
+def run_shipment_init_step(step_id):
+    """Run one shipment initialization step. Raises RuntimeError on failure."""
+    handlers = {
+        "support_off": _shipment_disable_support,
+        "worlds": lambda: _reset_worlds(restart=False),
+        "server_settings": lambda: _reset_server_settings(preserve_level=False),
+        "players": _reset_players,
+        "addons": _reset_addons,
+        "discord": _reset_discord,
+        "playit": _reset_playit,
+        "webui": _reset_webui,
+        "backups": _reset_update_backups,
+        "sanitize": _reset_factory_sanitize,
+    }
+    if step_id not in handlers:
+        raise ValueError("不明な初期化ステップです")
+    handlers[step_id]()
 
 
 def execute_reset(reset_id, admin_code):

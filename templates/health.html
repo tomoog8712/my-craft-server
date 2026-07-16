@@ -28,6 +28,7 @@
     <section class="card" id="start-card">
       <h2 class="card-title">システム診断</h2>
       <p class="card-label">現在の状態を確認します。サーバーがおかしいと感じたときにご利用ください。</p>
+      <p class="card-label">「出荷前テスト」は製品ID・GRUB・サポートOFF・クローン初期化・サービス起動などを自動確認します（BIOSは手動）。</p>
       <button type="button" class="btn btn-primary health-btn" id="btn-start-check">診断開始</button>
       <button type="button" class="btn btn-outline health-btn" id="btn-qa-check">出荷前テスト</button>
     </section>
@@ -53,7 +54,7 @@
 
     <section class="card qa-result-card" id="qa-result-card" hidden>
       <div class="qa-pass-box" id="qa-pass-box">
-        <p class="qa-pass-title">品質確認</p>
+        <p class="qa-pass-title">出荷判定</p>
         <p class="qa-pass-status" id="qa-pass-status">PASS</p>
       </div>
     </section>

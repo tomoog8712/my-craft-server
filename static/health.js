@@ -109,12 +109,21 @@
     box.replaceChild(next, btn);
   }
 
-  function computeOverall(checks) {
-    const hasFail = checks.some(function (c) { return c.status === 'fail'; });
-    const hasWarn = checks.some(function (c) { return c.status === 'warn'; });
-    if (hasFail) return { status: 'fail', icon: '🔴', text: '修正が必要です' };
+  function computeOverall(checks, mode) {
+    const hasFail = checks.some(function (c) {
+      if (mode === 'qa') return c.status === 'fail' || c.status === 'warn';
+      return c.status === 'fail';
+    });
+    const hasWarn = mode !== 'qa' && checks.some(function (c) { return c.status === 'warn'; });
+    if (hasFail) {
+      return mode === 'qa'
+        ? { status: 'fail', icon: '🔴', text: '出荷不可' }
+        : { status: 'fail', icon: '🔴', text: '修正が必要です' };
+    }
     if (hasWarn) return { status: 'warn', icon: '🟡', text: '注意があります' };
-    return { status: 'pass', icon: '🟢', text: '問題ありません' };
+    return mode === 'qa'
+      ? { status: 'pass', icon: '🟢', text: '出荷可能' }
+      : { status: 'pass', icon: '🟢', text: '問題ありません' };
   }
 
   function copyToClipboard(text) {
@@ -154,7 +163,7 @@
   }
 
   function renderResults(checks, mode) {
-    const overall = computeOverall(checks);
+    const overall = computeOverall(checks, mode);
     const overallBox = $('overall-box');
     overallBox.className = 'health-overall ' + overall.status;
     $('overall-icon').textContent = overall.icon;
@@ -174,35 +183,43 @@
       const qaStatus = $('qa-pass-status');
       if (overall.status === 'fail') {
         qaBox.className = 'qa-pass-box fail';
-        qaStatus.textContent = 'FAIL';
+        qaStatus.textContent = '出荷不可';
       } else {
         qaBox.className = 'qa-pass-box';
-        qaStatus.textContent = 'PASS';
+        qaStatus.textContent = '出荷可能';
       }
     } else {
       $('qa-result-card').hidden = true;
     }
   }
 
-  function buildReportText(checks, meta) {
-    const overall = computeOverall(checks);
-    const overallLabel = overall.status === 'pass' ? 'PASS' : overall.status.toUpperCase();
+  function buildReportText(checks, meta, mode) {
+    const overall = computeOverall(checks, mode || currentMode);
+    const overallLabel = mode === 'qa'
+      ? (overall.status === 'pass' ? '出荷可能' : '出荷不可')
+      : (overall.status === 'pass' ? 'PASS' : overall.status.toUpperCase());
     const now = new Date().toISOString();
+    const title = mode === 'qa'
+      ? 'My Craft Server 出荷前チェックレポート'
+      : 'My Craft Server 診断レポート';
 
     const keyMap = {
       lan: 'LAN', mdns: 'mDNS', api: 'API', webui: 'WebUI', nginx: 'Nginx',
       minecraft: 'Bedrock', qa_server: 'Bedrock', ssd: 'SSD',
-      memory: 'Memory', cpu: 'CPU', port: 'ポート',
+      memory: 'Memory', cpu: 'CPU', port: 'ポート', qa_port: 'ポート',
       server_properties: 'server.properties', internet: 'インターネット',
-      internet: 'インターネット',
       playit: 'Playit.gg',
       external_port: 'ポート開放',
       version: '最新版確認', logs: 'ログ', ubuntu: 'Ubuntu',
+      qa_serial: '製品ID', qa_grub: 'GRUB', qa_support: 'リモートサポート',
+      qa_factory_clean: 'クローン初期化', qa_machine_id: 'machine-id',
+      qa_discord_clean: 'Discord', qa_playit_clean: 'Playit',
+      qa_services: 'サービス', qa_nginx: 'Nginx', qa_bios: 'BIOS',
     };
 
     const lines = [
       '========================================',
-      'My Craft Server 診断レポート',
+      title,
       '========================================',
       '診断日時 ' + now,
       '製品ID ' + (meta.product_id || '-'),
@@ -226,6 +243,7 @@
       } else {
         value = check.status === 'pass' ? 'PASS' : check.status_label;
       }
+      if (check.status === 'info') value = '手動確認';
       lines.push(label + ' ' + value);
     });
     lines.push('総合 ' + overallLabel);
@@ -306,7 +324,7 @@
 
   async function copyReport() {
     if (!collectedChecks.length) return;
-    const text = buildReportText(collectedChecks, reportMeta || {});
+    const text = buildReportText(collectedChecks, reportMeta || {}, currentMode);
     try {
       await copyToClipboard(text);
       showSnackbar('診断レポートをコピーしました');

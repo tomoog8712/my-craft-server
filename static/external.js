@@ -3,6 +3,7 @@
 
   const POLL_MS = 10000;
   const AUTH_POLL_MS = 10000;
+
   let pollTimer = null;
   let busy = false;
   let settingsOpen = false;
@@ -135,6 +136,7 @@
       $('playit-port').textContent = String(joinPort);
       $('playit-endpoint').textContent = endpoint;
       $('playit-test-result').textContent = playit.last_test_message || '-';
+      settingsOpen = false;
       stopPoll();
       return;
     }
@@ -142,6 +144,7 @@
     if (inSetup) {
       renderPlayitSetup(playit);
     } else {
+      settingsOpen = false;
       stopPoll();
     }
   }
@@ -172,7 +175,7 @@
         }
       }
       renderPage(data);
-    } catch (err) {
+    } catch (_err) {
       showSnackbar('状態の取得に失敗しました', true);
     }
   }
@@ -191,7 +194,7 @@
         connection_target: target,
       });
       if (force) showSnackbar('接続テストを実行しました');
-    } catch (err) {
+    } catch (_err) {
       showSnackbar('ポート開放の確認に失敗しました', true);
     }
   }
@@ -344,7 +347,6 @@
     $('pf-state-badge').textContent = 'テスト中…';
     refreshPortforward(true);
   });
-
   refreshStatus(false);
   window.addEventListener('beforeunload', stopPoll);
 })();

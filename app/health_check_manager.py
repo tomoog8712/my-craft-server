@@ -14,8 +14,14 @@ from pathlib import Path
 from app.update_manager import compare_versions, fetch_latest_release, get_installed_version
 
 APPLIANCE_DIR = Path("/etc/appliance")
+DATA_DIR = Path("/opt/appliance/data")
 MINECRAFT_DIR = Path("/opt/minecraft")
 BACKUP_DIR = Path("/opt/appliance/backups")
+VERSION_FILE = Path("/opt/appliance/web/VERSION")
+GRUB_DEFAULT = Path("/etc/default/grub")
+
+SERIAL_PATTERN = re.compile(r"^(MCS|JRT)-[0-9]{6}$")
+MACHINE_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
 CHECK_ORDER = [
     "ubuntu",
@@ -38,13 +44,23 @@ CHECK_ORDER = [
 ]
 
 QA_CHECK_ORDER = [
+    "qa_serial",
+    "qa_grub",
+    "qa_support",
+    "qa_factory_clean",
+    "qa_machine_id",
+    "qa_discord_clean",
+    "qa_playit_clean",
+    "qa_services",
     "qa_server",
-    "qa_api",
     "qa_webui",
+    "qa_nginx",
     "qa_lan",
     "qa_mdns",
+    "qa_port",
     "qa_settings",
     "qa_backup",
+    "qa_bios",
 ]
 
 CHECK_LABELS = {
@@ -65,13 +81,24 @@ CHECK_LABELS = {
     "playit": "Playit.gg",
     "external_port": "ポート開放",
     "version": "最新版確認",
+    "qa_serial": "製品ID",
+    "qa_grub": "GRUB設定",
+    "qa_support": "リモートサポート",
+    "qa_factory_clean": "クローン初期化",
+    "qa_machine_id": "machine-id",
+    "qa_discord_clean": "Discord未設定",
+    "qa_playit_clean": "Playit未設定",
+    "qa_services": "サービス自動起動",
     "qa_server": "サーバー起動",
     "qa_api": "API",
     "qa_webui": "WebUI",
+    "qa_nginx": "Nginx",
     "qa_lan": "LAN",
     "qa_mdns": "mDNS",
+    "qa_port": "ポート",
     "qa_settings": "設定保持",
     "qa_backup": "バックアップ",
+    "qa_bios": "BIOS手動確認",
 }
 
 ERROR_PATTERNS = re.compile(
@@ -123,6 +150,59 @@ def _result(check_id, status, message, detail="", remedy="", value=""):
 def _service_active(name):
     code, out, _ = _run(["systemctl", "is-active", name], timeout=5)
     return code == 0 and out == "active"
+
+
+def _service_enabled(name):
+    code, out, _ = _run(["systemctl", "is-enabled", name], timeout=5)
+    return code == 0 and out in ("enabled", "enabled-runtime")
+
+
+def _grub_timeout():
+    content = _read_file(GRUB_DEFAULT)
+    for line in content.splitlines():
+        line = line.strip()
+        if line.startswith("GRUB_TIMEOUT="):
+            return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
+def _get_discord_webhook():
+    raw = _read_file(DATA_DIR / "discord.json")
+    if not raw:
+        return ""
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return ""
+    return (data.get("webhook_url") or "").strip()
+
+
+def _has_playit_secret():
+    secret_file = DATA_DIR / "playit.toml"
+    if secret_file.exists():
+        text = _read_file(secret_file)
+        if re.search(r"secret_key\s*=", text):
+            return True
+    code, out, _ = _run(
+        ["/opt/appliance/bin/playit-status.sh", "secret"],
+        timeout=8,
+    )
+    return code == 0 and bool(out.strip())
+
+
+def _factory_clone_artifacts():
+    artifacts = []
+    checks = [
+        (APPLIANCE_DIR / "cloudflare.token", "Cloudflareトークン"),
+        (Path("/etc/cloudflared"), "cloudflared設定"),
+        (DATA_DIR / "playit-claim-exchange.code", "Playit claim code"),
+        (DATA_DIR / "playit-claim-exchange.pid", "Playit claim PID"),
+        (Path("/run/playit/claim-exchange.code"), "Playit claim code (run)"),
+    ]
+    for path, label in checks:
+        if path.exists():
+            artifacts.append(label)
+    return artifacts
 
 
 def _get_hostname():
@@ -730,6 +810,223 @@ def check_version():
     )
 
 
+def check_qa_serial():
+    serial = _read_file(APPLIANCE_DIR / "serial")
+    if not serial or serial == "未設定":
+        return _result(
+            "qa_serial",
+            "fail",
+            "製品IDが未設定です",
+            detail="factory-clone.sh でシリアルを設定してください。",
+            remedy="sudo /opt/appliance/bin/factory-clone.sh MCS-000042",
+        )
+    if not SERIAL_PATTERN.match(serial):
+        return _result(
+            "qa_serial",
+            "fail",
+            f"製品IDの形式が不正です: {serial}",
+            detail="MCS-000001 形式（6桁）で設定してください。",
+            remedy="sudo /opt/appliance/bin/factory-clone.sh MCS-000042",
+            value=serial,
+        )
+    return _result(
+        "qa_serial",
+        "pass",
+        f"製品ID: {serial}",
+        detail="シリアル形式は正常です。ラベルと一致しているか目視確認してください。",
+        remedy="ラベル貼付後、管理画面の製品IDと一致することを確認してください。",
+        value=serial,
+    )
+
+
+def check_qa_grub():
+    timeout = _grub_timeout()
+    if timeout == "0":
+        return _result(
+            "qa_grub",
+            "pass",
+            "GRUB_TIMEOUT=0",
+            detail="/etc/default/grub でブートメニュー非表示が設定されています。",
+            remedy="変更後は sudo update-grub を実行してください。",
+            value="0",
+        )
+    return _result(
+        "qa_grub",
+        "fail",
+        f"GRUB_TIMEOUT={timeout or '未設定'}",
+        detail="出荷時は GRUB_TIMEOUT=0 に設定してください。",
+        remedy="sudo sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' /etc/default/grub && sudo update-grub",
+        value=timeout or "未設定",
+    )
+
+
+def check_qa_support():
+    from app.support_manager import is_remote_support_active
+
+    if is_remote_support_active():
+        return _result(
+            "qa_support",
+            "fail",
+            "リモートサポートが有効です",
+            detail="出荷前にリモートサポートをOFFにしてください。",
+            remedy="リモートサポート画面で無効化するか、工場出荷時リセットを実行してください。",
+            value="ON",
+        )
+    return _result(
+        "qa_support",
+        "pass",
+        "リモートサポートはOFFです",
+        detail="Tailscaleサポートは無効です。",
+        remedy="出荷前に再度確認してください。",
+        value="OFF",
+    )
+
+
+def check_qa_factory_clean():
+    issues = _factory_clone_artifacts()
+    ext_raw = _read_file(DATA_DIR / "external_connection.json")
+    if ext_raw:
+        try:
+            mode = json.loads(ext_raw).get("mode", "")
+            if mode == "cloudflare":
+                issues.append("Cloudflare外部接続モード")
+        except json.JSONDecodeError:
+            pass
+    if issues:
+        return _result(
+            "qa_factory_clean",
+            "fail",
+            "クローン元の設定が残っています",
+            detail="残存項目:\n- " + "\n- ".join(issues),
+            remedy="リセットセンターで工場出荷時リセットを実行し、factory-clone.sh を再実行してください。",
+            value="NG",
+        )
+    return _result(
+        "qa_factory_clean",
+        "pass",
+        "クローン初期化は完了しています",
+        detail="前の台の認証情報やCloudflare設定は検出されませんでした。",
+        remedy="問題があれば工場出荷時リセットを再実行してください。",
+        value="OK",
+    )
+
+
+def check_qa_machine_id():
+    machine_id = _read_file("/etc/machine-id")
+    if MACHINE_ID_PATTERN.match(machine_id):
+        return _result(
+            "qa_machine_id",
+            "pass",
+            "machine-id は有効です",
+            detail=f"machine-id: {machine_id[:8]}…",
+            remedy="クローン後は factory-clone.sh で再生成されていることを確認してください。",
+            value=machine_id[:8] + "…",
+        )
+    return _result(
+        "qa_machine_id",
+        "fail",
+        "machine-id が未設定または不正です",
+        detail=f"現在の値: {machine_id or '(空)'}",
+        remedy="sudo /opt/appliance/bin/factory-clone.sh MCS-000042 を実行してください。",
+        value="NG",
+    )
+
+
+def check_qa_discord_clean():
+    webhook = _get_discord_webhook()
+    if webhook:
+        return _result(
+            "qa_discord_clean",
+            "fail",
+            "Discord Webhookが設定されています",
+            detail="前の利用者のWebhookが残っている可能性があります。",
+            remedy="リセットセンターで工場出荷時リセットを実行してください。",
+            value="設定あり",
+        )
+    return _result(
+        "qa_discord_clean",
+        "pass",
+        "Discordは未設定です",
+        detail="Webhook URLは空です。",
+        remedy="顧客が購入後に設定します。",
+        value="未設定",
+    )
+
+
+def check_qa_playit_clean():
+    if _has_playit_secret():
+        return _result(
+            "qa_playit_clean",
+            "fail",
+            "Playit認証情報が残っています",
+            detail="クローン元のPlayitアカウントが紐づいている可能性があります。",
+            remedy="リセットセンターで工場出荷時リセットを実行してください。",
+            value="認証済み",
+        )
+    return _result(
+        "qa_playit_clean",
+        "pass",
+        "Playitは未設定です",
+        detail="顧客が外部接続画面からセットアップします。",
+        remedy="出荷時は未設定が正常です。",
+        value="未設定",
+    )
+
+
+def check_qa_services():
+    units = ["bedrock", "mhserver-web", "nginx"]
+    problems = []
+    details = []
+    for unit in units:
+        enabled = _service_enabled(unit)
+        active = _service_active(unit)
+        details.append(f"{unit}: enabled={enabled}, active={active}")
+        if not enabled:
+            problems.append(f"{unit} が自動起動未設定")
+        elif not active:
+            problems.append(f"{unit} が停止中")
+    if problems:
+        return _result(
+            "qa_services",
+            "fail",
+            "サービスの自動起動に問題があります",
+            detail="\n".join(details) + "\n\n" + "\n".join(problems),
+            remedy="sudo systemctl enable --now bedrock mhserver-web nginx",
+            value="NG",
+        )
+    return _result(
+        "qa_services",
+        "pass",
+        "主要サービスは自動起動・稼働中です",
+        detail="\n".join(details),
+        remedy="再起動後も同様であることを確認してください。",
+        value="OK",
+    )
+
+
+def check_qa_nginx():
+    return check_nginx()
+
+
+def check_qa_port():
+    return check_port()
+
+
+def check_qa_bios():
+    return _result(
+        "qa_bios",
+        "info",
+        "BIOSの手動確認が必要です",
+        detail=(
+            "BIOS設定画面で以下を目視確認してください:\n"
+            "- Halt On: No Errors（Keyboard Error で停止しない）\n"
+            "- 起動順序: SSD/HDD優先"
+        ),
+        remedy="FUTRO BIOSで Keyboard Error → Halt On を No Errors に設定してください。",
+        value="手動",
+    )
+
+
 def check_qa_server():
     return check_minecraft()
 
@@ -822,23 +1119,39 @@ CHECK_RUNNERS = {
     "playit": check_playit,
     "external_port": check_external_port,
     "version": check_version,
+    "qa_serial": check_qa_serial,
+    "qa_grub": check_qa_grub,
+    "qa_support": check_qa_support,
+    "qa_factory_clean": check_qa_factory_clean,
+    "qa_machine_id": check_qa_machine_id,
+    "qa_discord_clean": check_qa_discord_clean,
+    "qa_playit_clean": check_qa_playit_clean,
+    "qa_services": check_qa_services,
     "qa_server": check_qa_server,
     "qa_api": check_qa_api,
     "qa_webui": check_qa_webui,
+    "qa_nginx": check_qa_nginx,
     "qa_lan": check_qa_lan,
     "qa_mdns": check_qa_mdns,
+    "qa_port": check_qa_port,
     "qa_settings": check_qa_settings,
     "qa_backup": check_qa_backup,
+    "qa_bios": check_qa_bios,
 }
 
 
-def _overall_status(checks):
-    has_fail = any(c["status"] == "fail" for c in checks)
-    has_warn = any(c["status"] == "warn" for c in checks)
+def _overall_status(checks, mode="normal"):
+    blocking = ("fail", "warn") if mode == "qa" else ("fail",)
+    has_fail = any(c["status"] in blocking for c in checks)
+    has_warn = mode != "qa" and any(c["status"] == "warn" for c in checks)
     if has_fail:
+        if mode == "qa":
+            return "fail", "🔴 出荷不可"
         return "fail", "🔴 修正が必要です"
     if has_warn:
         return "warn", "🟡 注意があります"
+    if mode == "qa":
+        return "pass", "🟢 出荷可能"
     return "pass", "🟢 問題ありません"
 
 
@@ -852,7 +1165,7 @@ def run_check(check_id):
 def run_all_checks(mode="normal"):
     order = QA_CHECK_ORDER if mode == "qa" else CHECK_ORDER
     checks = [run_check(check_id) for check_id in order]
-    overall, overall_label = _overall_status(checks)
+    overall, overall_label = _overall_status(checks, mode=mode)
     return {
         "mode": mode,
         "checked_at": datetime.now(timezone.utc).isoformat(),
@@ -861,6 +1174,11 @@ def run_all_checks(mode="normal"):
         "checks": checks,
         "meta": build_report_meta(),
     }
+
+
+def run_shipment_check():
+    """Run all QA checks and return report dict."""
+    return run_all_checks(mode="qa")
 
 
 def build_report_meta():
@@ -939,18 +1257,25 @@ def build_report_text(report):
     meta = report.get("meta", {})
     checks = report.get("checks", [])
     overall = report.get("overall", "pass")
-    overall_label = "PASS"
-    if overall == "warn":
-        overall_label = "WARNING"
-    elif overall == "fail":
-        overall_label = "FAIL"
+    version = _read_file(VERSION_FILE) or "-"
+    if report.get("mode") == "qa":
+        title = "My Craft Server 出荷前チェックレポート"
+        overall_label = "出荷可能" if overall == "pass" else "出荷不可"
+    else:
+        title = "My Craft Server 診断レポート"
+        overall_label = "PASS"
+        if overall == "warn":
+            overall_label = "WARNING"
+        elif overall == "fail":
+            overall_label = "FAIL"
 
     lines = [
         "========================================",
-        "My Craft Server 診断レポート",
+        title,
         "========================================",
         f"診断日時 {report.get('checked_at', '-')}",
         f"製品ID {meta.get('product_id', '-')}",
+        f"ソフトウェア版 {version}",
         f"OS {meta.get('os', '-')}",
         f"Minecraft {meta.get('minecraft_version', '-')}",
         f"ホスト名 {meta.get('hostname', '-')}",
@@ -986,6 +1311,8 @@ def build_report_text(report):
             value = check.get("value") or check["status_label"]
         else:
             value = "PASS" if check["status"] == "pass" else check["status_label"]
+        if check["status"] == "info":
+            value = "手動確認"
         lines.append(f"{label} {value}")
 
     lines.extend([
@@ -1024,3 +1351,11 @@ def build_report_text(report):
 def get_check_definitions(mode="normal"):
     order = QA_CHECK_ORDER if mode == "qa" else CHECK_ORDER
     return [{"id": check_id, "label": CHECK_LABELS.get(check_id, check_id)} for check_id in order]
+
+
+if __name__ == "__main__":
+    import sys
+
+    report = run_shipment_check()
+    print(build_report_text(report))
+    sys.exit(0 if report.get("overall") == "pass" else 1)
