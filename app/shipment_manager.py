@@ -15,6 +15,7 @@ APPLIANCE_DIR = Path("/etc/appliance")
 SHIPMENT_PASSWORD = "8712"
 SERIAL_PATTERN = re.compile(r"^(MCS|JRT)-(\d{6})$")
 APPLY_SERIAL_SCRIPT = "/opt/appliance/bin/shipment-apply-serial.sh"
+PRIV_EXEC_SCRIPT = "/opt/appliance/bin/priv-exec.sh"
 
 _auth_until = 0.0
 _lock = threading.Lock()
@@ -157,7 +158,7 @@ def execute_serial_update(serial):
         if not ok:
             return False, msg, ""
         code, out, err = _run(
-            ["sudo", "-n", APPLY_SERIAL_SCRIPT, value],
+            ["sudo", "-n", PRIV_EXEC_SCRIPT, APPLY_SERIAL_SCRIPT, value],
             timeout=180,
         )
         if code != 0:

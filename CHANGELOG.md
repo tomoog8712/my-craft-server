@@ -44,7 +44,7 @@
 
 - 出荷設定・リセット時の `server.properties` 初期化で `shutil.copyfile` を使用（`copy2` の chmod 失敗を回避）
 - 出荷設定のシリアル入力画面で「続行」ボタンが押せない問題を修正（`ui-disabled` の解除タイミング）
-- 出荷設定のシリアル更新失敗を修正（`mhserver-web` の sandbox から `/etc/appliance` を read-only 指定しない）
+- 出荷設定のシリアル更新失敗を修正（`priv-exec.sh` 経由で sandbox 外から `/etc/appliance` を更新）
 
 ### Removed
 

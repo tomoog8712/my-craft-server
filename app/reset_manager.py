@@ -26,6 +26,7 @@ MINECRAFT_DIR = Path("/opt/minecraft")
 DEFAULT_PROPERTIES = Path("/opt/minecraft-bedrock/server.properties")
 REBOOT_SCRIPT = "/opt/appliance/bin/reset-reboot.sh"
 FACTORY_SANITIZE_SCRIPT = "/opt/appliance/bin/reset-factory-sanitize.sh"
+PRIV_EXEC_SCRIPT = "/opt/appliance/bin/priv-exec.sh"
 
 _lock = threading.Lock()
 
@@ -399,7 +400,7 @@ def _reset_webui():
 
 
 def _reset_factory_sanitize():
-    code, out, err = _run(["sudo", "-n", FACTORY_SANITIZE_SCRIPT], timeout=120)
+    code, out, err = _run(["sudo", "-n", PRIV_EXEC_SCRIPT, FACTORY_SANITIZE_SCRIPT], timeout=120)
     if code != 0:
         raise RuntimeError(err or out or "クローン向け初期化に失敗しました")
 
@@ -437,7 +438,7 @@ def _reset_update_backups():
 
 
 def _schedule_reboot():
-    code, out, err = _run(["sudo", "-n", REBOOT_SCRIPT], timeout=10)
+    code, out, err = _run(["sudo", "-n", PRIV_EXEC_SCRIPT, REBOOT_SCRIPT], timeout=10)
     if code != 0:
         raise RuntimeError(err or out or "再起動の予約に失敗しました")
 
