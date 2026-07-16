@@ -442,6 +442,7 @@ if [[ "$SKIP_BEDROCK" -eq 0 ]]; then
         sed -i 's/^server-name=.*/server-name=my-craft-server/' "${MINECRAFT_DIR}/server.properties"
         sed -i 's/^level-name=.*/level-name=Bedrock level/' "${MINECRAFT_DIR}/server.properties"
         sed -i 's/^server-port=.*/server-port=19132/' "${MINECRAFT_DIR}/server.properties"
+        sed -i 's/^allow-list=.*/allow-list=false/' "${MINECRAFT_DIR}/server.properties"
     fi
 
     echo '[]' > "${MINECRAFT_DIR}/allowlist.json"

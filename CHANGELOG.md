@@ -38,6 +38,8 @@
 
 ### Changed
 
+- 初期セットアップ（`install.sh`）で `allow-list=false` を設定（空の allowlist による接続拒否を防止）
+
 ### Fixed
 
 ### Removed
