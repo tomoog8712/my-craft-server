@@ -43,6 +43,7 @@
 ### Fixed
 
 - 出荷設定・リセット時の `server.properties` 初期化で `shutil.copyfile` を使用（`copy2` の chmod 失敗を回避）
+- 出荷設定のシリアル入力画面で「続行」ボタンが押せない問題を修正（`ui-disabled` の解除タイミング）
 
 ### Removed
 

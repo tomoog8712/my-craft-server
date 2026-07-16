@@ -283,7 +283,9 @@
       showMessage('初期化が完了しました。');
       await wait(DELAY_MS);
 
+      setBusy(false);
       const serial = await waitForSerialInput(stepsData.current_serial);
+      setBusy(true);
       await runSerialPhase(serial);
 
       showMessage('出荷時設定が終わりました。');
