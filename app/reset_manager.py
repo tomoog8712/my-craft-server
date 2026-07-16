@@ -217,7 +217,7 @@ def _is_private_ip(ip_str):
 
 def _csrf_ok():
     host = (request.host or "").split(":")[0].lower()
-    allowed_hosts = {host, "my-craft-server.local", "my-craft-server", "localhost", "127.0.0.1"}
+    allowed_hosts = {host, "my-craft-server.local", "my-craft-server", "my-craft-server-master.local", "my-craft-server-master", "localhost", "127.0.0.1"}
     origin = request.headers.get("Origin", "").strip()
     if origin:
         from urllib.parse import urlparse
