@@ -26,8 +26,9 @@
 
 ## [1.0.2] - 2026-07-16
 
+### Changed
 
-
+- 初期セットアップ（`install.sh`）のデフォルトホスト名を `my-craft-server` に変更（`my-craft-server-master` は別環境で使用中のため）
 
 ---
 

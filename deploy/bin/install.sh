@@ -20,7 +20,7 @@ DATA_DIR="${APPLIANCE_ROOT}/data"
 ETC_DIR="/etc/appliance"
 MINECRAFT_DIR="/opt/minecraft"
 BEDROCK_TEMPLATE="/opt/minecraft-bedrock"
-HOSTNAME="my-craft-server-master"
+HOSTNAME="my-craft-server"
 MASTER_SERIAL="MCS-000001"
 SKIP_BEDROCK=0
 SKIP_REBOOT=0
@@ -199,7 +199,7 @@ server {
     listen 80 default_server;
     listen [::]:80 default_server;
 
-    server_name my-craft-server-master.local my-craft-server-master _;
+    server_name my-craft-server.local my-craft-server _;
 
     client_max_body_size 1024m;
 
