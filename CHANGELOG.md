@@ -24,6 +24,13 @@
 
 ---
 
+## [1.0.2] - 2026-07-16
+
+
+
+
+---
+
 ## [Unreleased]
 
 ### Added
@@ -65,5 +72,5 @@
 - 未使用ページ（サーバー名変更 `/settings`、システムバックアップ一覧 `/backups`）
 - 重複・未使用 API（ワールド別アドオン API 等）
 
-[Unreleased]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.1...HEAD
-[1.0.1]: https://github.com/tomoog8712/my-craft-server/releases/tag/v1.0.1
+[Unreleased]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/tomoog8712/my-craft-server/releases/tag/v1.0.2

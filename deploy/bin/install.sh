@@ -8,7 +8,7 @@
 #   sudo /opt/appliance/bin/install.sh --serial MCS-000001
 #
 # 前提:
-#   /opt/appliance/{bin,lib,web} が配置済みであること
+#   /opt/appliance/web が配置済みであること（deploy/bin から bin を自動同期）
 #   /opt/minecraft-bedrock に Bedrock サーバー本体があること
 #
 set -euo pipefail
@@ -65,9 +65,29 @@ if [[ ! "$MASTER_SERIAL" =~ ^(MCS|JRT)-[0-9]{6}$ ]]; then
     die "シリアル形式が不正です: ${MASTER_SERIAL} (例: MCS-000001)"
 fi
 
-[[ -d "$BIN_DIR" ]] || die "${BIN_DIR} がありません。appliance ファイルを先に配置してください。"
 [[ -d "$WEB_DIR/app" ]] || die "${WEB_DIR}/app がありません。Web UI を先に配置してください。"
-[[ -x "${BIN_DIR}/bedrock-start.sh" ]] || die "bedrock-start.sh が見つかりません。"
+
+DEPLOY_BIN="${WEB_DIR}/deploy/bin"
+DEPLOY_LIB="${WEB_DIR}/deploy/lib"
+install -d -m 0755 "$BIN_DIR"
+install -d -m 0755 "${APPLIANCE_ROOT}/lib"
+
+if [[ -d "$DEPLOY_BIN" ]]; then
+    log "deploy/bin から ${BIN_DIR} へスクリプトを同期"
+    for script in "${DEPLOY_BIN}"/*.sh "${DEPLOY_BIN}"/mhserver-bedrock; do
+        [[ -f "$script" ]] || continue
+        install -m 755 "$script" "${BIN_DIR}/$(basename "$script")"
+    done
+fi
+
+if [[ -d "$DEPLOY_LIB" ]]; then
+    for lib in "${DEPLOY_LIB}"/*.sh; do
+        [[ -f "$lib" ]] || continue
+        install -m 755 "$lib" "${APPLIANCE_ROOT}/lib/$(basename "$lib")"
+    done
+fi
+
+[[ -x "${BIN_DIR}/bedrock-start.sh" ]] || die "bedrock-start.sh が見つかりません。${DEPLOY_BIN} を確認してください。"
 
 log "My Craft Server 初期セットアップを開始します (serial=${MASTER_SERIAL})"
 

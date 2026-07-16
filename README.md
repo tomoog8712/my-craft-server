@@ -7,7 +7,7 @@ Minecraft Bedrock 専用アプライアンス **My Craft Server** の管理 Web 
 | 製品名 | My Craft Server |
 | 製品 ID 形式 | `MCS-000001` |
 | 現在バージョン | **1.0.1**（`VERSION` 参照） |
-| リポジトリ | https://github.com/tomoog8712/my-craft-server （非公開） |
+| リポジトリ | https://github.com/tomoog8712/my-craft-server （公開） |
 
 ## 機能概要
 
