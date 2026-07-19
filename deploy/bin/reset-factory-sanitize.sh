@@ -1,17 +1,17 @@
 #!/bin/bash
 # Additional privileged cleanup for clone shipment reset.
+# Preserves internal infra: serial, settings.conf, cloudflare.token, playit systemd drop-in, /opt/appliance/bin.
 set -euo pipefail
 
 APPLIANCE_DIR="/etc/appliance"
 DATA_DIR="/opt/appliance/data"
 
-# Clear provisioning state that may bind the clone to the source unit.
+# Clear per-unit provisioning cache that may bind a clone to the source image.
 rm -f "${APPLIANCE_DIR}/.provisioned" || true
 rm -f "${APPLIANCE_DIR}/config.json" || true
 rm -f "${APPLIANCE_DIR}/uuid" || true
 
-# Remove stale Cloudflare credentials/state files if they exist.
-rm -f "${APPLIANCE_DIR}/cloudflare.token" || true
+# Keep cloudflare.token and settings.conf (shared factory DDNS credentials).
 rm -rf /etc/cloudflared || true
 rm -f /etc/systemd/system/cloudflared.service /etc/systemd/system/multi-user.target.wants/cloudflared.service || true
 

@@ -66,6 +66,100 @@ _INSTALLED_CACHE = {"value": None, "fetched_at": 0.0}
 _INSTALLED_CACHE_TTL = 300
 
 
+TUNNEL_SCRIPT_ERRORS = {
+    "NOT_AUTHENTICATED": "Playitが未認証です。先に認証を完了してください。",
+    "AGENT_NOT_READY": "Playit Agentの準備ができていません。数十秒待ってから再度お試しください。",
+    "NOT_INSTALLED": "Playitがインストールされていません。",
+}
+
+
+def _translate_tunnel_error(msg):
+    if not msg:
+        return ""
+    raw = str(msg).strip()
+    if raw in TUNNEL_SCRIPT_ERRORS:
+        return TUNNEL_SCRIPT_ERRORS[raw]
+    if "AccountPortLimitReached" in raw:
+        return (
+            "Playit.ggのアカウントのポート上限に達しています。"
+            " playit.ggのTunnelsページで不要なトンネルを削除してください。"
+        )
+    if "Read-only file system" in raw:
+        return "設定ファイルの保存に失敗しました。サーバー管理者に連絡してください。"
+    if raw.startswith("接続") or raw.startswith("Playit") or raw.startswith("トンネル"):
+        return raw
+    return ""
+
+
+def _diagnose_tunnel_status(secret):
+    """Return a Japanese hint when Bedrock tunnel exists but has no join address."""
+    if not secret:
+        return ""
+
+    rundata = _api_post("/v1/agents/rundata", {}, secret=secret, timeout=10)
+    if _api_success(rundata):
+        data = rundata.get("data") or {}
+        perms = data.get("permissions") or {}
+        account_status = (perms.get("account_status") or "").lower()
+        if "email" in account_status and "not" in account_status:
+            return (
+                "Playit.ggのメールアドレスが未確認です。"
+                " 確認メールのリンクを開いてから、再度お試しください。"
+            )
+        for notice in data.get("notices") or []:
+            notice_msg = (notice.get("message") or "").lower()
+            if "verify" in notice_msg and "email" in notice_msg:
+                return (
+                    "Playit.ggのメールアドレスが未確認です。"
+                    " 確認メールのリンクを開いてから、再度お試しください。"
+                )
+
+    listing = _api_post("/v1/tunnels/list", {}, secret=secret, timeout=10)
+    if not _api_success(listing):
+        return ""
+
+    tunnels = (listing.get("data") or {}).get("tunnels") or []
+    bedrock = [
+        t for t in tunnels
+        if "bedrock" in (t.get("tunnel_type") or "").lower()
+    ]
+    if not bedrock:
+        return (
+            "Minecraft Bedrockトンネルが見つかりません。"
+            " playit.ggのTunnelsページで手動作成してください。"
+        )
+
+    for tunnel in bedrock:
+        if _collect_tunnel_addresses(tunnel):
+            return ""
+
+    limit_count = 0
+    pending_count = 0
+    for tunnel in bedrock:
+        for alloc in tunnel.get("port_allocation_requests") or []:
+            status = alloc.get("status") or ""
+            if status == "AccountPortLimitReached":
+                limit_count += 1
+            elif status in ("Pending", "PublicAllocationPending"):
+                pending_count += 1
+
+    if limit_count:
+        return (
+            f"Playit.ggのアカウントのポート上限に達しています（Bedrockトンネル {len(bedrock)} 件）。"
+            " playit.ggのTunnelsページで不要なトンネルを削除してから、再度お試しください。"
+        )
+    if pending_count:
+        return (
+            "トンネルは作成されましたが、接続アドレスの割り当てが完了していません。"
+            " playit.ggのTunnelsページで状態を確認し、Agentsで「IPv4 only」を選択してください。"
+        )
+    return (
+        "接続アドレスを取得できません。"
+        " playit.ggのTunnelsページでMinecraft Bedrockトンネルを手動作成してください。"
+    )
+
+
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -607,13 +701,11 @@ def _poll_claim_exchange():
             return True, secret
         return False, "認証コードがありません"
 
-    agent_ok, agent_msg = (True, "OK")
     if not (_service_active() and _claim_exchange_running(code)):
         agent_ok, agent_msg = _ensure_claim_agent_running(code)
         if not agent_ok:
             state["last_error"] = agent_msg
             _save_state(state)
-            return False, agent_msg
 
     result = _api_post("/claim/exchange", {"code": code}, timeout=8)
     if not _api_success(result):
@@ -761,6 +853,8 @@ def _resolve_status(state, secret):
             state["auto_domain"] = tunnel.get("auto_domain") or ""
             state["tunnel_type"] = tunnel.get("tunnel_type") or ""
             state["status"] = "connected"
+        elif state.get("status") == "authenticating" and authenticated:
+            state["status"] = "tunnel_pending"
         elif state.get("status") == "authenticating":
             pass
         elif authenticated:
@@ -877,11 +971,16 @@ def get_playit_status(force_refresh=False, poll_claim=True):
             and bool(state.get("endpoint") or state.get("address"))
         )
 
+        tunnel_hint = ""
+        if secret and not has_endpoint and setup_phase == "tunnel":
+            tunnel_hint = _diagnose_tunnel_status(secret) or state.get("last_error") or ""
+
         return {
             **state,
             "is_ready": is_ready,
             "endpoint": endpoint,
             "setup_phase": setup_phase,
+            "tunnel_hint": tunnel_hint,
             "playit_dashboard_url": "https://playit.gg/account/tunnels",
             "qr_url": (
                 "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data="
@@ -1016,6 +1115,7 @@ def disconnect_playit(restart_auth=True):
         state["status"] = "unauthenticated"
         _save_state(state)
 
+        mode = _load_mode()
         if restart_auth and mode.get("mode") == "playit":
             ok, msg = _start_claim()
             if ok:
@@ -1040,12 +1140,25 @@ def create_playit_tunnel(local_ip="127.0.0.1", local_port=None):
             time.sleep(2)
         ok, msg = _create_bedrock_tunnel(local_ip, local_port)
         if not ok:
-            return False, msg
+            return False, _translate_tunnel_error(msg) or msg
         state = _load_state()
         state = _resolve_status(state, secret)
         if state.get("endpoint") or state.get("address"):
+            state["last_error"] = ""
+            _save_state(state)
             return True, "Bedrockトンネルを作成しました"
-        return True, msg
+        hint = _diagnose_tunnel_status(secret)
+        if hint:
+            state["last_error"] = hint
+            _save_state(state)
+            return False, hint
+        fallback = (
+            "トンネルを作成しましたが、接続アドレスを取得できませんでした。"
+            " playit.ggのTunnelsページで設定を確認してください。"
+        )
+        state["last_error"] = fallback
+        _save_state(state)
+        return False, fallback
 
 
 def save_external_mode(mode):

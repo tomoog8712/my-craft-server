@@ -26,6 +26,7 @@ if [[ -f "$CODEFILE" ]] && [[ "$(cat "$CODEFILE")" == "$CODE" ]]; then
     echo "ALREADY"
     exit 0
   fi
+  rm -f "$PIDFILE"
 fi
 
 /opt/appliance/bin/playit-start-agent.sh >/dev/null
@@ -46,6 +47,14 @@ runuser -u playit -- /usr/bin/playit claim exchange "$CODE" --wait 0 >>"$LOGFILE
 sleep 0.5
 CLAIM_PID="$(pgrep -f "claim exchange ${CODE}" | head -1 || true)"
 if [[ -z "$CLAIM_PID" ]]; then
+  if grep -q "Program approved. Finishing setup" "$LOGFILE" 2>/dev/null; then
+    SECRET="$(grep -E '^[0-9a-f]{64}$' "$LOGFILE" | tail -1 || true)"
+    if [[ -n "$SECRET" ]]; then
+      /opt/appliance/bin/playit-save-secret.sh "$SECRET" >/dev/null || true
+      echo "OK"
+      exit 0
+    fi
+  fi
   echo "CLAIM_START_FAILED"
   exit 1
 fi

@@ -103,6 +103,21 @@
         startPoll();
       }
     } else if (showTunnelStep) {
+      const hintEl = $('tunnel-status-msg');
+      const afterHint = $('tunnel-after-create-hint');
+      const hint = playit.tunnel_hint || playit.last_error || '';
+      if (hintEl) {
+        if (hint) {
+          hintEl.textContent = hint;
+          hintEl.hidden = false;
+        } else {
+          hintEl.textContent = '';
+          hintEl.hidden = true;
+        }
+      }
+      if (afterHint && hint) {
+        afterHint.hidden = false;
+      }
       startPoll(false);
     } else if (hasEndpoint(playit)) {
       stopPoll();

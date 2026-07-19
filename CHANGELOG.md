@@ -32,6 +32,28 @@
 
 ---
 
+## [1.0.3] - 2026-07-19
+
+### Added
+
+- Playit トンネル作成失敗時の日本語エラー表示（`tunnel_hint`）
+- 「トンネルを自動作成」後の playit.gg 手動設定案内
+
+### Fixed
+
+- Playit 認証完了後に画面が更新されない問題（claim exchange 早期 return、secret 保存先）
+- `ProtectSystem=full` 下で `/etc/playit` への書き込みが失敗する問題（secret を data ディレクトリに統一）
+- 認証済みなのに `authenticating` のまま進まない状態遷移
+- トンネル作成 API がアドレス未取得でも success を返す問題
+
+### Changed
+
+- 出荷/工場リセットの sanitize で Cloudflare API トークンを保持（内部インフラデータ）
+- `install.sh` に Playit systemd drop-in と sudoers（create-tunnel / read-claim-secret）を追加
+- `playit-claim-exchange.sh` 認証済み時の secret 回収と stale PID 処理を改善
+
+---
+
 ## [Unreleased]
 
 ### Added

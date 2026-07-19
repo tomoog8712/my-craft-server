@@ -242,7 +242,7 @@ cat > /etc/sudoers.d/mhserver-bedrock <<'EOF'
 Cmnd_Alias BEDROCKCTL = /usr/bin/systemctl start bedrock, /usr/bin/systemctl stop bedrock, /usr/bin/systemctl restart bedrock, /usr/bin/systemctl is-active bedrock
 Cmnd_Alias BEDROCKPLAYER = /opt/appliance/bin/bedrock-console-send.sh, /opt/appliance/bin/bedrock-json-write.sh
 Cmnd_Alias SUPPORTCTL = /opt/appliance/bin/support-enable.sh, /opt/appliance/bin/support-disable.sh, /opt/appliance/bin/support-status.sh
-Cmnd_Alias PLAYITCTL = /opt/appliance/bin/playit-install.sh, /opt/appliance/bin/playit-enable.sh, /opt/appliance/bin/playit-disable.sh, /opt/appliance/bin/playit-disconnect.sh, /opt/appliance/bin/playit-status.sh, /opt/appliance/bin/playit-save-secret.sh, /opt/appliance/bin/playit-start-agent.sh, /opt/appliance/bin/playit-claim-exchange.sh, /usr/bin/systemctl start playit, /usr/bin/systemctl stop playit, /usr/bin/systemctl restart playit, /usr/bin/systemctl enable playit, /usr/bin/systemctl disable playit
+Cmnd_Alias PLAYITCTL = /opt/appliance/bin/playit-install.sh, /opt/appliance/bin/playit-enable.sh, /opt/appliance/bin/playit-disable.sh, /opt/appliance/bin/playit-disconnect.sh, /opt/appliance/bin/playit-status.sh, /opt/appliance/bin/playit-save-secret.sh, /opt/appliance/bin/playit-start-agent.sh, /opt/appliance/bin/playit-claim-exchange.sh, /opt/appliance/bin/playit-create-tunnel.sh, /opt/appliance/bin/playit-read-claim-secret.sh, /usr/bin/systemctl start playit, /usr/bin/systemctl stop playit, /usr/bin/systemctl restart playit, /usr/bin/systemctl enable playit, /usr/bin/systemctl disable playit
 Cmnd_Alias RESETCTL = /opt/appliance/bin/priv-exec.sh /opt/appliance/bin/reset-reboot.sh, /opt/appliance/bin/priv-exec.sh /opt/appliance/bin/reset-factory-sanitize.sh
 Cmnd_Alias SHIPMENTCTL = /opt/appliance/bin/priv-exec.sh /opt/appliance/bin/shipment-apply-serial.sh *
 mhserver ALL=(root) NOPASSWD: BEDROCKCTL, BEDROCKPLAYER, SUPPORTCTL, PLAYITCTL, RESETCTL, SHIPMENTCTL
@@ -285,6 +285,14 @@ fi
 if [[ -x "${BIN_DIR}/playit-disconnect.sh" ]]; then
     sudo -u mhserver "${BIN_DIR}/playit-disconnect.sh" 2>/dev/null || "${BIN_DIR}/playit-disconnect.sh" 2>/dev/null || true
 fi
+
+# Playit secret lives under /opt/appliance/data (writable by mhserver-web); not /etc/playit.
+install -d -m 0755 /etc/systemd/system/playit.service.d
+cat > /etc/systemd/system/playit.service.d/appliance.conf <<'EOF'
+[Service]
+ExecStart=
+ExecStart=/opt/playit/playitd --secret-path /opt/appliance/data/playit.toml --socket-path /run/playit/playitd.sock -l /var/log/playit/playit.log
+EOF
 
 rm -rf "${DATA_DIR:?}/"*
 install -d -m 0775 -o mhserver -g mhserver "${DATA_DIR}"/{players,worlds,addons}

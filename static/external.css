@@ -142,3 +142,42 @@
   border-top: 1px solid #E5E5EA;
 }
 
+
+/* Snackbar feedback (external page loads external.css, not players/support.css) */
+.snackbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #323232;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  z-index: 600;
+  max-width: 90%;
+  text-align: center;
+}
+
+.snackbar.warn {
+  background: var(--orange);
+}
+
+.snackbar[hidden] {
+  display: none !important;
+}
+
+.tunnel-status-msg {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.tunnel-status-msg a {
+  color: inherit;
+  font-weight: 700;
+}

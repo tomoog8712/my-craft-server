@@ -17,8 +17,6 @@ secret_key = "${SECRET}"
 EOF
 chown playit:playit "$PLAYIT_SECRET" 2>/dev/null || true
 chmod 0640 "$PLAYIT_SECRET" 2>/dev/null || true
-rm -f /etc/playit/playit.toml 2>/dev/null || true
-
 rm -f "$CREDENTIALS_CLEARED" 2>/dev/null || true
 
 systemctl daemon-reload

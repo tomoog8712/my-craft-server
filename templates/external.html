@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>外部接続 - My Craft Server</title>
   <link rel="stylesheet" href="/static/style.css?v=3">
-  <link rel="stylesheet" href="/static/external.css?v=5">
+  <link rel="stylesheet" href="/static/external.css?v=7">
 </head>
 <body class="external-page">
   <header class="header">
@@ -79,7 +79,14 @@
           <p class="setup-ok">✅ Agent認証が完了しました</p>
           <p class="card-label">次に <strong>Minecraft Bedrock</strong> トンネルを作成します。まず下の「トンネルを自動作成」を試してください。</p>
           <button type="button" class="btn btn-primary external-btn" id="btn-create-tunnel">トンネルを自動作成</button>
-          <p class="card-label" style="margin-top:1rem">手動で作成する場合（Playit.ggの「Agent Setup」画面は使わないでください）:</p>
+          <p class="card-label warn-note" id="tunnel-after-create-hint" hidden>
+            自動作成後も接続アドレスが表示されない場合は、
+            <a href="https://playit.gg/account/tunnels" target="_blank" rel="noopener">playit.ggのTunnelsページ</a>
+            を開き、Minecraft Bedrockトンネルを手動で作成・確認してください。
+            作成後は「アドレスを更新」を押してください。
+          </p>
+          <p class="tunnel-status-msg warn-note" id="tunnel-status-msg" hidden></p>
+          <p class="card-label" style="margin-top:1rem">手動で作成する場合:</p>
           <ol class="setup-steps">
             <li><a href="https://playit.gg/account/agents" target="_blank" rel="noopener">Agents</a> で <strong>IPv4 only（IPv4のみ）</strong> を選択（本サーバーはIPv6非対応のため必須）</li>
             <li><a href="https://playit.gg/account/tunnels" target="_blank" rel="noopener">Tunnels</a> から「Add tunnel」→「Minecraft Bedrock」を選択</li>
@@ -134,6 +141,6 @@
 
   <div id="snackbar" class="snackbar" hidden></div>
 
-  <script src="/static/external.js?v=18"></script>
+  <script src="/static/external.js?v=19"></script>
 </body>
 </html>

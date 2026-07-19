@@ -154,13 +154,15 @@ PREVIEW_CONTENT = {
         "kept": [
             "製品ID",
             "シリアル番号",
+            "Cloudflare APIトークン",
+            "settings.conf（DDNS設定）",
             "システム",
             "WebUI本体",
             "Bedrock本体",
+            "Playitプログラム・systemd設定",
             "リモートサポート機能",
             "診断機能",
             "アップデート機能",
-            "Playitプログラム",
         ],
     },
 }
