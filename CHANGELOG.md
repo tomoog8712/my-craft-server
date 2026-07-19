@@ -54,6 +54,16 @@
 
 ---
 
+## [1.0.4] - 2026-07-19
+
+### Fixed
+
+- ワールド新規作成時に Bedrock が `allow-list=true` に戻り「サーバーに招待されてません」になる問題
+- サーバー設定初期化・工場出荷時リセット後も `allow-list=false` を維持（起動後の再適用を含む）
+- プレイヤー管理初期化時に `allow-list=false` を明示的に復元
+
+---
+
 ## [Unreleased]
 
 ### Added
@@ -103,5 +113,7 @@
 - 未使用ページ（サーバー名変更 `/settings`、システムバックアップ一覧 `/backups`）
 - 重複・未使用 API（ワールド別アドオン API 等）
 
-[Unreleased]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/tomoog8712/my-craft-server/releases/tag/v1.0.2

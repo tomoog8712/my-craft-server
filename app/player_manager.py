@@ -875,6 +875,7 @@ def reset_all_players(restart_if_needed=True):
     except RuntimeError:
         (MINECRAFT_DIR / "permissions.json").write_text("[]\n", encoding="utf-8")
         (MINECRAFT_DIR / "allowlist.json").write_text("[]\n", encoding="utf-8")
+    write_properties({"allow-list": "false"})
     restarted = _release_ban_enforcement_if_idle(restart_if_needed=restart_if_needed)
     if _console_ready() and not restarted:
         _send_console("permission reload")

@@ -18,6 +18,7 @@ from app.update_manager import wait_for_running
 MINECRAFT_DIR = Path("/opt/minecraft")
 WORLDS_DIR = MINECRAFT_DIR / "worlds"
 DATA_DIR = Path("/opt/appliance/data")
+PLAYER_CONFIG_FILE = DATA_DIR / "config.json"
 WORLDS_DATA = DATA_DIR / "worlds"
 REGISTRY_FILE = WORLDS_DATA / "registry.json"
 WORLD_BACKUP_DIR = WORLDS_DATA / "backups"
@@ -248,6 +249,22 @@ def _load_profile(world_id):
 
 def _apply_properties(updates):
     write_properties(updates)
+
+
+def _ban_allowlist_enforcement_active():
+    try:
+        cfg = json.loads(PLAYER_CONFIG_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(cfg.get("ban_allowlist_enforcement"))
+
+
+def _ensure_open_join_settings():
+    """Allow anyone to join unless ban enforcement intentionally uses allow-list."""
+    if _ban_allowlist_enforcement_active():
+        return
+    write_properties({"allow-list": "false"})
+    (MINECRAFT_DIR / "allowlist.json").write_text("[]\n", encoding="utf-8")
 
 
 def _find_world_data_dir(path):
@@ -694,6 +711,7 @@ def create_world(data):
             "show-coordinates": _bool("show-coordinates", False),
             "allow-cheats": _bool("allow-cheats", False),
             "force-gamemode": _bool("force-gamemode", False),
+            "allow-list": "false",
         }
         if data.get("default_gamemode"):
             updates["gamemode"] = GAMEMODE_MAP.get(str(data["default_gamemode"]).lower(), gamemode)
@@ -706,11 +724,17 @@ def create_world(data):
             raise ValueError("ワールドフォルダが既に存在します")
 
         _apply_properties(updates)
+        _ensure_open_join_settings()
         _start_and_wait()
 
         time.sleep(3)
         if not world_path.exists():
             raise RuntimeError("ワールドの生成に失敗しました")
+
+        # Bedrock may reset server.properties on first world generation.
+        _stop_and_wait()
+        _ensure_open_join_settings()
+        _start_and_wait()
 
         _ensure_death_notify_pack(name)
 

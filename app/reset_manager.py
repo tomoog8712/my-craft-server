@@ -18,7 +18,7 @@ from app.playit_manager import disconnect_playit
 from app.player_manager import reset_all_players
 from app.support_manager import disable_support, is_remote_support_active
 from app.update_manager import delete_backup, list_backups, wait_for_running
-from app.world_manager import WORLDS_DATA, WORLDS_DIR
+from app.world_manager import WORLDS_DATA, WORLDS_DIR, _ensure_open_join_settings
 
 APPLIANCE_DIR = Path("/etc/appliance")
 DATA_DIR = Path("/opt/appliance/data")
@@ -312,12 +312,26 @@ def _reset_server_settings(preserve_level=True):
             )
         else:
             content += f"\nlevel-name={level_name}\n"
+    if re.search(r"^allow-list=", content, flags=re.MULTILINE):
+        content = re.sub(
+            r"^allow-list=.*$",
+            "allow-list=false",
+            content,
+            count=1,
+            flags=re.MULTILINE,
+        )
+    else:
+        content += "\nallow-list=false\n"
     props_path.write_text(content, encoding="utf-8")
     (MINECRAFT_DIR / "allowlist.json").write_text("[]\n", encoding="utf-8")
     (MINECRAFT_DIR / "permissions.json").write_text("[]\n", encoding="utf-8")
     whitelist = MINECRAFT_DIR / "whitelist.json"
     if whitelist.exists():
         whitelist.write_text("[]\n", encoding="utf-8")
+    _start_and_wait()
+    # Bedrock may reset allow-list when generating the default world on first start.
+    _stop_and_wait()
+    _ensure_open_join_settings()
     _start_and_wait()
 
 
