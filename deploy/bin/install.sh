@@ -104,6 +104,7 @@ apt-get install -y -qq \
     jq \
     curl \
     rsync \
+    unzip \
     uuid-runtime \
     netplan.io
 
@@ -120,9 +121,11 @@ getent passwd playit >/dev/null || \
 usermod -aG minecraft,appliance,systemd-journal mhserver 2>/dev/null || true
 
 log "3/12 ディレクトリを作成"
-install -d -m 0755 "$APPLIANCE_ROOT"/{bin,lib,backups,work}
+install -d -m 0775 -o mhserver -g mhserver "$APPLIANCE_ROOT"/{bin,lib,backups,work}
 install -d -m 0775 -o mhserver -g mhserver "$DATA_DIR"
 install -d -m 0775 -o mhserver -g mhserver "$DATA_DIR"/{players,worlds,addons}
+install -d -m 0775 -o mhserver -g mhserver "$DATA_DIR"/addons/{packs,backups}
+install -d -m 0775 -o mhserver -g mhserver "$DATA_DIR"/addons/packs/{behavior,resource}
 install -d -m 0775 -o mhserver -g minecraft "$APPLIANCE_ROOT/backups"
 install -d -m 0750 -o root -g appliance "$ETC_DIR"
 install -d -m 0755 "$MINECRAFT_DIR"
@@ -217,6 +220,17 @@ server {
         client_max_body_size 1024m;
     }
 
+    location /api/addons/upload {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        client_max_body_size 1024m;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host $host;
@@ -237,17 +251,7 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 
 log "6/12 sudoers を設定"
-cat > /etc/sudoers.d/mhserver-bedrock <<'EOF'
-# My Craft Server - mhserver user bedrock control only
-Cmnd_Alias BEDROCKCTL = /usr/bin/systemctl start bedrock, /usr/bin/systemctl stop bedrock, /usr/bin/systemctl restart bedrock, /usr/bin/systemctl is-active bedrock
-Cmnd_Alias BEDROCKPLAYER = /opt/appliance/bin/bedrock-console-send.sh, /opt/appliance/bin/bedrock-json-write.sh
-Cmnd_Alias SUPPORTCTL = /opt/appliance/bin/support-enable.sh, /opt/appliance/bin/support-disable.sh, /opt/appliance/bin/support-status.sh
-Cmnd_Alias PLAYITCTL = /opt/appliance/bin/playit-install.sh, /opt/appliance/bin/playit-enable.sh, /opt/appliance/bin/playit-disable.sh, /opt/appliance/bin/playit-disconnect.sh, /opt/appliance/bin/playit-status.sh, /opt/appliance/bin/playit-save-secret.sh, /opt/appliance/bin/playit-start-agent.sh, /opt/appliance/bin/playit-claim-exchange.sh, /opt/appliance/bin/playit-create-tunnel.sh, /opt/appliance/bin/playit-read-claim-secret.sh, /usr/bin/systemctl start playit, /usr/bin/systemctl stop playit, /usr/bin/systemctl restart playit, /usr/bin/systemctl enable playit, /usr/bin/systemctl disable playit
-Cmnd_Alias RESETCTL = /opt/appliance/bin/priv-exec.sh /opt/appliance/bin/reset-reboot.sh, /opt/appliance/bin/priv-exec.sh /opt/appliance/bin/reset-factory-sanitize.sh
-Cmnd_Alias SHIPMENTCTL = /opt/appliance/bin/priv-exec.sh /opt/appliance/bin/shipment-apply-serial.sh *
-mhserver ALL=(root) NOPASSWD: BEDROCKCTL, BEDROCKPLAYER, SUPPORTCTL, PLAYITCTL, RESETCTL, SHIPMENTCTL
-EOF
-chmod 440 /etc/sudoers.d/mhserver-bedrock
+install -m 0440 "${DEPLOY_BIN}/mhserver-bedrock" /etc/sudoers.d/mhserver-bedrock
 visudo -c -f /etc/sudoers.d/mhserver-bedrock
 
 log "7/12 /etc/appliance を初期化"
@@ -261,6 +265,7 @@ CLOUDFLARE_API_TOKEN_FILE=/etc/appliance/cloudflare.token
 DDNS_PREFIX=mc
 EXTERNAL_PORT=19132
 RESET_ADMIN_CODE=1111
+ADDON_ZIP_PASSWORD=
 EOF
 chmod 640 "${ETC_DIR}/settings.conf"
 chown root:appliance "${ETC_DIR}/settings.conf"
@@ -296,6 +301,8 @@ EOF
 
 rm -rf "${DATA_DIR:?}/"*
 install -d -m 0775 -o mhserver -g mhserver "${DATA_DIR}"/{players,worlds,addons}
+install -d -m 0775 -o mhserver -g mhserver "${DATA_DIR}"/addons/{packs,backups}
+install -d -m 0775 -o mhserver -g mhserver "${DATA_DIR}"/addons/packs/{behavior,resource}
 
 cat > "${DATA_DIR}/external_connection.json" <<'EOF'
 {
@@ -406,9 +413,15 @@ EOF
 
 cat > "${DATA_DIR}/addons/registry.json" <<'EOF'
 {
-  "addons": {},
-  "history": []
+  "packs": [],
+  "last_backup_id": "",
+  "rollback_available": false,
+  "updated_at": ""
 }
+EOF
+
+cat > "${DATA_DIR}/addons/history.json" <<'EOF'
+{"entries": []}
 EOF
 
 cat > "${DATA_DIR}/bedrock_version.json" <<'EOF'
@@ -520,6 +533,7 @@ fi
 
 log "11/12 権限を調整"
 chmod +x "${BIN_DIR}/"*.sh 2>/dev/null || true
+chown -R mhserver:mhserver "${APPLIANCE_ROOT}/work" 2>/dev/null || true
 chown -R mhserver:mhserver "${WEB_DIR}/static" "${WEB_DIR}/templates" 2>/dev/null || true
 chown -R mhserver:mhserver "${DATA_DIR}"
 chgrp -R mhserver "${WEB_DIR}" 2>/dev/null || true

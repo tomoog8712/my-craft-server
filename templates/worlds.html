@@ -6,7 +6,7 @@
   <title>ワールド - My Craft Server</title>
   <link rel="stylesheet" href="/static/style.css?v=3">
   <link rel="stylesheet" href="/static/update.css?v=1">
-  <link rel="stylesheet" href="/static/worlds.css?v=9">
+  <link rel="stylesheet" href="/static/worlds.css?v=10">
 </head>
 <body class="worlds-page">
   <header class="header">
@@ -71,7 +71,8 @@
               <label class="switch-cell"><span>PvP</span><input type="checkbox" name="pvp" checked class="sw"></label>
               <label class="switch-cell"><span>座標表示</span><input type="checkbox" name="show-coordinates" class="sw"></label>
               <label class="switch-cell"><span>実績</span><input type="checkbox" name="achievements" checked class="sw"></label>
-              <label class="switch-cell"><span>チート許可</span><input type="checkbox" name="allow-cheats" class="sw"></label>
+              <label class="switch-cell"><span>チート許可</span><input type="checkbox" name="allow-cheats" checked class="sw"></label>
+              <label class="switch-cell"><span>コマンドブロック</span><input type="checkbox" name="command_blocks_enabled" checked class="sw"></label>
               <label class="switch-cell"><span>昼夜サイクル</span><input type="checkbox" name="daylight_cycle" checked class="sw"></label>
               <label class="switch-cell"><span>天候変化</span><input type="checkbox" name="weather" checked class="sw"></label>
               <label class="switch-cell"><span>即時リスポーン</span><input type="checkbox" name="immediate_respawn" class="sw"></label>
@@ -114,8 +115,8 @@
           </div>
 
           <div class="form-section">
-            <label class="form-field"><span>最大人数</span><input type="number" name="max_players" min="1" max="200" value="10"></label>
-            <label class="form-field"><span>シード値</span><input type="text" name="seed" placeholder="空欄ならランダム"><small class="field-hint">既存ワールドでは地形は変わりません</small></label>
+            <label class="form-field"><span>最大人数</span><input type="number" name="max_players" min="1" max="200" value="10"><small class="field-hint" id="settings-max-players-hint">保存後すぐ反映</small></label>
+            <label class="form-field"><span>シード値</span><input type="text" name="seed" placeholder="空欄ならランダム"><small class="field-hint field-hint-restart" id="settings-seed-hint">再起動後に有効（既存の地形は変わりません）</small></label>
           </div>
 
           <div class="form-section">
@@ -172,6 +173,6 @@
   <input type="file" id="import-input" accept=".zip,.mcworld" hidden>
 
   <div id="snackbar" class="snackbar" hidden></div>
-  <script src="/static/worlds.js?v=16"></script>
+  <script src="/static/worlds.js?v=18"></script>
 </body>
 </html>

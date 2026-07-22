@@ -27,10 +27,17 @@ from app.world_manager import (
     sync_registry,
 )
 
+APPLIANCE_DIR = Path("/etc/appliance")
 LEGACY_ADDONS_ROOT = WORLDS_DATA / "addons"
 ADDONS_ROOT = Path("/opt/appliance/data/addons")
 WORK_DIR = Path("/opt/appliance/work")
 ALLOWED_UPLOAD_EXT = {".mcpack", ".mcaddon", ".zip"}
+NESTED_ARCHIVE_EXT = {".mcpack", ".mcaddon", ".zip"}
+MAX_NESTED_ARCHIVE_DEPTH = 8
+UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 BLOCKED_EXT = {
     ".exe", ".dll", ".sh", ".bat", ".cmd", ".msi", ".so", ".dylib",
     ".jar", ".com", ".scr", ".ps1", ".vbs", ".deb", ".rpm",
@@ -180,19 +187,93 @@ def _world_path(world_id):
     return path, entry
 
 
+def _normalize_version_parts(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        parts = []
+        for item in value[:4]:
+            try:
+                parts.append(int(item))
+            except (TypeError, ValueError):
+                parts.append(item)
+        return parts
+    if isinstance(value, (int, float)):
+        return [int(value)]
+    text = str(value).strip()
+    if not text:
+        return []
+    if text.isdigit():
+        return [int(text)]
+    parts = []
+    for token in re.split(r"[.\-_]", text):
+        token = token.strip()
+        if not token:
+            continue
+        if token.isdigit():
+            parts.append(int(token))
+        else:
+            match = re.match(r"^(\d+)", token)
+            if match:
+                parts.append(int(match.group(1)))
+            break
+    return parts[:4]
+
+
 def _version_label(version):
+    parts = _normalize_version_parts(version)
+    if parts:
+        return ".".join(str(x) for x in parts)
     if not version:
         return "情報なし"
-    if isinstance(version, list):
-        parts = [str(x) for x in version[:4]]
-        return ".".join(parts) if parts else "情報なし"
     return str(version)
 
 
 def _version_tuple_str(parts):
-    if not parts:
+    normalized = _normalize_version_parts(parts)
+    if not normalized:
         return ""
-    return ".".join(str(x) for x in parts[:4])
+    return ".".join(str(x) for x in normalized[:4])
+
+
+def _load_pack_lang_map(pack_dir):
+    texts_dir = Path(pack_dir) / "texts"
+    if not texts_dir.is_dir():
+        return {}
+    merged = {}
+    for lang_name in ("en_US.lang", "en_GB.lang", "ja_JP.lang"):
+        lang_path = texts_dir / lang_name
+        if not lang_path.is_file():
+            continue
+        try:
+            content = lang_path.read_text(encoding="utf-8-sig")
+        except OSError:
+            continue
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip()
+            if " ## " in val:
+                val = val.split(" ## ", 1)[0].strip()
+            if key and key not in merged:
+                merged[key] = val.replace("\\n", "\n")
+    return merged
+
+
+def _resolve_manifest_localized_text(pack_dir, value):
+    text = str(value or "").strip()
+    if not text:
+        return text
+    if " " not in text:
+        resolved = _load_pack_lang_map(pack_dir).get(text)
+        if resolved:
+            return resolved
+    return text
 
 
 def _parse_manifest(path):
@@ -210,23 +291,31 @@ def _parse_manifest(path):
         "behavior_uuid": "",
         "resource_uuid": "",
         "path": str(path),
+        "parse_error": "",
     }
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    data, err = _read_manifest_json(path)
+    if err:
+        info["parse_error"] = err
         return info
 
-    header = data.get("header") or {}
-    info["name"] = header.get("name") or "情報なし"
-    info["uuid"] = (header.get("uuid") or "").lower()
-    info["version"] = header.get("version") or []
+    header = _manifest_section(data, "header") or {}
+    pack_dir = path.parent
+    info["name"] = _resolve_manifest_localized_text(pack_dir, _manifest_field(header, "name") or "情報なし")
+    info["uuid"] = _normalize_uuid(_manifest_field(header, "uuid"))
+    info["version"] = _normalize_version_parts(_manifest_field(header, "version"))
     info["version_label"] = _version_label(info["version"])
-    info["min_engine_version"] = header.get("min_engine_version") or []
+    info["min_engine_version"] = _normalize_version_parts(_manifest_field(header, "min_engine_version"))
     info["min_engine_label"] = _version_tuple_str(info["min_engine_version"]) or "情報なし"
-    info["description"] = header.get("description") or "情報なし"
+    info["description"] = _resolve_manifest_localized_text(
+        pack_dir, _manifest_field(header, "description") or "情報なし"
+    )
+    if info["name"] in ("情報なし", "") or info["name"].startswith("pack."):
+        folder_hint = pack_dir.name.strip()
+        if folder_hint:
+            info["name"] = folder_hint
     info["dependencies"] = data.get("dependencies") or []
 
-    metadata = data.get("metadata") or {}
+    metadata = _manifest_section(data, "metadata") or {}
     authors = metadata.get("authors") or header.get("authors") or []
     if isinstance(authors, list) and authors:
         first = authors[0]
@@ -238,22 +327,249 @@ def _parse_manifest(path):
         info["author"] = authors
 
     kinds = set()
+    module_uuids = []
     for module in data.get("modules") or []:
-        mtype = (module.get("type") or "").lower()
-        muuid = (module.get("uuid") or "").lower()
-        if mtype in ("data", "script"):
+        if not isinstance(module, dict):
+            continue
+        mtype = str(_manifest_field(module, "type") or "").lower()
+        muuid = _normalize_uuid(_manifest_field(module, "uuid"))
+        if muuid:
+            module_uuids.append(muuid)
+        if mtype in ("data", "script", "javascript"):
             kinds.add("behavior")
             info["behavior_uuid"] = info["behavior_uuid"] or muuid or info["uuid"]
-        elif mtype in ("resources", "resource", "skin_pack"):
+        elif mtype in ("resources", "resource", "skin_pack", "world_template"):
             kinds.add("resource")
             info["resource_uuid"] = info["resource_uuid"] or muuid or info["uuid"]
+        elif muuid and not kinds:
+            kinds.add("resource")
+
     if kinds:
         info["pack_kind"] = "both" if len(kinds) > 1 else next(iter(kinds))
     if not info["behavior_uuid"] and info["pack_kind"] in ("behavior", "both"):
         info["behavior_uuid"] = info["uuid"]
     if not info["resource_uuid"] and info["pack_kind"] in ("resource", "both"):
         info["resource_uuid"] = info["uuid"]
+
+    if not _manifest_has_identity(info):
+        discovered = _discover_manifest_uuids(data)
+        if discovered and not info["uuid"]:
+            info["uuid"] = discovered[0]
+        if discovered and not info["resource_uuid"] and info["pack_kind"] in ("resource", "both", "unknown"):
+            info["resource_uuid"] = discovered[-1 if len(discovered) > 1 else 0]
+            if info["pack_kind"] == "unknown":
+                info["pack_kind"] = "resource"
+        if discovered and not info["behavior_uuid"] and info["pack_kind"] == "behavior":
+            info["behavior_uuid"] = discovered[0]
+
+    if not info["uuid"] and info["resource_uuid"]:
+        info["uuid"] = info["resource_uuid"]
+    if not info["uuid"] and info["behavior_uuid"]:
+        info["uuid"] = info["behavior_uuid"]
     return info
+
+
+def _manifest_section(data, key):
+    if not isinstance(data, dict):
+        return {}
+    if key in data:
+        val = data.get(key)
+        return val if isinstance(val, dict) else {}
+    for k, val in data.items():
+        if str(k).lower() == key.lower() and isinstance(val, dict):
+            return val
+    return {}
+
+
+def _manifest_field(section, key):
+    if not isinstance(section, dict):
+        return None
+    if key in section:
+        return section.get(key)
+    for k, val in section.items():
+        if str(k).lower() == key.lower():
+            return val
+    return None
+
+
+def _normalize_uuid(value):
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        value = value.get("uuid") or value.get("UUID") or ""
+    token = str(value).strip().lower()
+    if not token or token in ("null", "none", "undefined"):
+        return ""
+    if UUID_RE.fullmatch(token):
+        return token
+    return ""
+
+
+def _discover_manifest_uuids(data):
+    found = []
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            for key, val in obj.items():
+                if str(key).lower() == "uuid":
+                    norm = _normalize_uuid(val)
+                    if norm and norm not in found:
+                        found.append(norm)
+                else:
+                    walk(val)
+        elif isinstance(obj, list):
+            for item in obj:
+                walk(item)
+
+    walk(data)
+    return found
+
+
+def _manifest_path_is_noise(rel_path):
+    parts = str(rel_path).replace("\\", "/").split("/")
+    for part in parts:
+        if not part:
+            continue
+        if part == "__MACOSX" or part.startswith("._"):
+            return True
+    return False
+
+
+def _sanitize_manifest_bytes(raw):
+    if not raw:
+        return b""
+    cleaned = raw.replace(b"\x00", b"")
+    if cleaned.startswith(b"\xef\xbb\xbf"):
+        cleaned = cleaned[3:]
+    elif cleaned.startswith(b"\xff\xfe") or cleaned.startswith(b"\xfe\xff"):
+        return cleaned
+    return cleaned.lstrip()
+
+
+def _looks_like_html(text):
+    stripped = (text or "").lstrip()
+    lower = stripped[:256].lower()
+    return lower.startswith("<!doctype") or lower.startswith("<html") or lower.startswith("<?xml")
+
+
+def _strip_json_comments(text):
+    out = []
+    idx = 0
+    in_string = False
+    escape = False
+    while idx < len(text):
+        ch = text[idx]
+        if in_string:
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            idx += 1
+            continue
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            idx += 1
+            continue
+        if text.startswith("/*", idx):
+            end = text.find("*/", idx + 2)
+            if end == -1:
+                break
+            idx = end + 2
+            continue
+        if text.startswith("//", idx):
+            end = text.find("\n", idx + 2)
+            if end == -1:
+                break
+            idx = end
+            continue
+        out.append(ch)
+        idx += 1
+    return "".join(out)
+
+
+def _remove_trailing_commas(text):
+    prev = None
+    current = text
+    while prev != current:
+        prev = current
+        current = re.sub(r",(\s*[}\]])", r"\1", current)
+    return current
+
+
+def _relaxed_json_loads(text):
+    cleaned = _remove_trailing_commas(_strip_json_comments(text.strip()))
+    return json.loads(cleaned)
+
+
+def _decode_manifest_text(raw):
+    for encoding in ("utf-8-sig", "utf-8", "utf-16", "utf-16-le", "utf-16-be", "cp1252", "latin-1"):
+        try:
+            return raw.decode(encoding), encoding
+        except UnicodeDecodeError:
+            continue
+    return None, ""
+
+
+def _read_manifest_json(path):
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None, "read_failed"
+    raw = _sanitize_manifest_bytes(raw)
+    if not raw.strip():
+        return None, "empty"
+    text, _encoding = _decode_manifest_text(raw)
+    if text is None:
+        return None, "invalid_json"
+    if _looks_like_html(text):
+        return None, "html_content"
+    for loader in (json.loads, _relaxed_json_loads):
+        try:
+            data = loader(text)
+            if isinstance(data, dict):
+                return data, ""
+        except json.JSONDecodeError:
+            continue
+    return None, "invalid_json"
+
+
+def _manifest_read_error_message(manifest_dirs, root):
+    details = []
+    html_found = False
+    for pack_dir in manifest_dirs:
+        manifest_path = pack_dir / "manifest.json"
+        rel = str(manifest_path.relative_to(root))
+        try:
+            size = manifest_path.stat().st_size
+        except OSError:
+            size = 0
+        _, err = _read_manifest_json(manifest_path)
+        if err == "html_content":
+            html_found = True
+        details.append(f"{rel} ({size} B)")
+
+    detail_text = "、".join(details[:3])
+    if len(details) > 3:
+        detail_text += f" 他{len(details) - 3}件"
+
+    if html_found:
+        return (
+            f"manifest.json は {len(manifest_dirs)} 件見つかりましたが、"
+            "Webページ（HTML）の内容でした。"
+            "CurseForge 等から PC ブラウザで直接ダウンロードし直してください。"
+            + (f"（{detail_text}）" if detail_text else "")
+        )
+
+    return (
+        f"manifest.json は {len(manifest_dirs)} 件見つかりましたが、"
+        "内容を読み取れませんでした（JSON形式が不正、または文字コードが対応外です）。"
+        "ファイルが壊れているか、Bedrock 用の .mcpack / .mcaddon ではない可能性があります。"
+        + (f"（{detail_text}）" if detail_text else "")
+    )
 
 
 def _normalize_addon_name(name):
@@ -289,7 +605,15 @@ def _pack_has_slot(pack, kind):
 
 
 def _is_installable(pack):
-    return _pack_has_slot(pack, "behavior") and _pack_has_slot(pack, "resource")
+    return _pack_has_slot(pack, "behavior") or _pack_has_slot(pack, "resource")
+
+
+def _manifest_has_identity(manifest):
+    return bool(
+        manifest.get("uuid")
+        or manifest.get("behavior_uuid")
+        or manifest.get("resource_uuid")
+    )
 
 
 def _pack_enabled(pack):
@@ -371,6 +695,195 @@ def _validate_upload_name(name):
         raise ValueError("対応形式は .mcpack / .mcaddon / .zip のみです")
 
 
+def _ensure_valid_archive(archive_path):
+    try:
+        head = archive_path.read_bytes()[:512]
+    except OSError as exc:
+        raise ValueError("ファイルを読み取れませんでした") from exc
+    stripped = head.lstrip()
+    if stripped.startswith(b"<!DOCTYPE") or stripped.startswith(b"<html") or stripped.startswith(b"<HTML"):
+        raise ValueError(
+            "ファイルが正しくダウンロードされていません（Webページが保存されています）。"
+            "PCのブラウザでCurseForgeから直接ダウンロードし直してください。"
+        )
+    if not zipfile.is_zipfile(archive_path):
+        size_kb = archive_path.stat().st_size / 1024
+        hint = "ダウンロードが途中で失敗している可能性があります。" if size_kb < 100 else ""
+        raise ValueError(
+            "ZIP形式のアドオンファイルではありません。"
+            + (f"（{size_kb:.1f} KB）" if size_kb else "")
+            + hint
+        )
+
+
+def _read_appliance_setting(key, default=""):
+    path = APPLIANCE_DIR / "settings.conf"
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return default
+    prefix = f"{key}="
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith(prefix):
+            return line.split("=", 1)[1].strip()
+    return default
+
+
+def _get_addon_zip_password():
+    """Optional server-side password for password-protected .mcaddon / .zip uploads."""
+    return _read_appliance_setting("ADDON_ZIP_PASSWORD", "")
+
+
+def _zip_member_encrypted(member):
+    return bool(member.flag_bits & 0x1)
+
+
+def _validate_zip_members(zf):
+    for member in zf.infolist():
+        if member.is_dir():
+            continue
+        if not _is_safe_member(member.filename):
+            raise ValueError("安全でないファイルが含まれています")
+        ext = Path(member.filename).suffix.lower()
+        if ext in BLOCKED_EXT:
+            raise ValueError(f"許可されていないファイルです: {ext}")
+
+
+def _zip_has_encrypted_members(zf):
+    return any(_zip_member_encrypted(m) for m in zf.infolist() if not m.is_dir())
+
+
+def _extract_zip_encrypted_error(exc):
+    msg = str(exc).lower()
+    return "password" in msg or "encrypted" in msg
+
+
+def _extract_with_unzip(upload_path, dest_dir, password=""):
+    cmd = ["unzip", "-o", str(upload_path), "-d", str(dest_dir)]
+    if password:
+        cmd.insert(1, f"-P{password}")
+    code, out, err = _run(cmd, timeout=120)
+    if code != 0:
+        detail = (err or out or "展開に失敗しました").strip().splitlines()[-1]
+        raise ValueError(detail)
+
+
+def _passwords_to_try():
+    configured = _get_addon_zip_password()
+    passwords = []
+    if configured:
+        passwords.append(configured)
+    if configured != "":
+        passwords.append("")
+    return passwords
+
+
+def _extract_zip_file(archive_path, dest_dir):
+    """Extract a zip/mcpack/mcaddon archive into dest_dir."""
+    _ensure_valid_archive(archive_path)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    passwords_to_try = _passwords_to_try()
+
+    try:
+        zf = zipfile.ZipFile(archive_path, "r")
+    except zipfile.BadZipFile as exc:
+        raise ValueError(
+            "ZIP形式のアドオンファイルではありません。ダウンロードし直してください。"
+        ) from exc
+
+    with zf:
+        _validate_zip_members(zf)
+        encrypted = _zip_has_encrypted_members(zf)
+        if not encrypted:
+            zf.extractall(dest_dir)
+            return
+
+        last_exc = None
+        for password in passwords_to_try:
+            if password:
+                zf.setpassword(password.encode("utf-8"))
+            else:
+                zf.setpassword(None)
+            try:
+                zf.extractall(dest_dir)
+                return
+            except RuntimeError as exc:
+                if _extract_zip_encrypted_error(exc):
+                    last_exc = exc
+                    continue
+                raise ValueError(str(exc)) from exc
+
+        for password in passwords_to_try:
+            try:
+                if dest_dir.exists():
+                    shutil.rmtree(dest_dir)
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                _extract_with_unzip(archive_path, dest_dir, password)
+                return
+            except ValueError as exc:
+                last_exc = exc
+
+        configured = _get_addon_zip_password()
+        if configured:
+            raise ValueError(
+                "パスワード付き .mcaddon / .zip の展開に失敗しました。"
+                "ADDON_ZIP_PASSWORD の設定を確認するか、パスワードなしのファイルをご利用ください。"
+            ) from last_exc
+        raise ValueError(
+            "パスワード付き .mcaddon / .zip です。"
+            "パスワードなしで保存し直すか、/etc/appliance/settings.conf の "
+            "ADDON_ZIP_PASSWORD に展開用パスワードを設定してください。"
+        ) from last_exc
+
+
+def _nested_extract_target(archive_path):
+    base = archive_path.parent / archive_path.stem
+    target = base
+    suffix = 2
+    while target.exists():
+        target = archive_path.parent / f"{archive_path.stem}_{suffix}"
+        suffix += 1
+    return target
+
+
+def _expand_nested_archives(root):
+    """Unpack .mcpack / .mcaddon / .zip files nested inside an upload."""
+    root = Path(root)
+    for _ in range(MAX_NESTED_ARCHIVE_DEPTH):
+        archives = []
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in NESTED_ARCHIVE_EXT and not zipfile.is_zipfile(path):
+                continue
+            rel = str(path.relative_to(root))
+            if not _is_safe_member(rel):
+                continue
+            archives.append(path)
+
+        if not archives:
+            break
+
+        expanded = False
+        for archive in archives:
+            if not zipfile.is_zipfile(archive):
+                continue
+            target = _nested_extract_target(archive)
+            try:
+                _extract_zip_file(archive, target)
+            except (ValueError, OSError, zipfile.BadZipFile, RuntimeError):
+                shutil.rmtree(target, ignore_errors=True)
+                continue
+            archive.unlink(missing_ok=True)
+            expanded = True
+
+        if not expanded:
+            break
+
+
 def _is_safe_member(name):
     norm = name.replace("\\", "/")
     if norm.startswith("/") or ".." in norm.split("/"):
@@ -388,25 +901,20 @@ def _is_safe_member(name):
 def _extract_upload(upload_path, dest_dir):
     dest_dir.mkdir(parents=True, exist_ok=True)
     lower = upload_path.name.lower()
-    if lower.endswith(".mcpack") or lower.endswith(".mcaddon") or lower.endswith(".zip"):
-        with zipfile.ZipFile(upload_path, "r") as zf:
-            for member in zf.infolist():
-                if member.is_dir():
-                    continue
-                if not _is_safe_member(member.filename):
-                    raise ValueError("安全でないファイルが含まれています")
-                ext = Path(member.filename).suffix.lower()
-                if ext in BLOCKED_EXT:
-                    raise ValueError(f"許可されていないファイルです: {ext}")
-            zf.extractall(dest_dir)
-        return
-    raise ValueError("対応形式は .mcpack / .mcaddon / .zip のみです")
+    if not (lower.endswith(".mcpack") or lower.endswith(".mcaddon") or lower.endswith(".zip")):
+        raise ValueError("対応形式は .mcpack / .mcaddon / .zip のみです")
+
+    _extract_zip_file(upload_path, dest_dir)
+    _expand_nested_archives(dest_dir)
 
 
 def _find_manifest_dirs(root):
     found = []
-    for path in sorted(root.rglob("manifest.json")):
-        if not _is_safe_member(str(path.relative_to(root))):
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.name.lower() != "manifest.json":
+            continue
+        rel = str(path.relative_to(root))
+        if not _is_safe_member(rel) or _manifest_path_is_noise(rel):
             continue
         found.append(path.parent)
     return found
@@ -822,6 +1330,8 @@ def _ingest_manifest(registry, pack_dir, manifest, source_name):
 def _public_pack(pack):
     installable = _is_installable(pack)
     enabled = _pack_enabled(pack)
+    has_behavior = _pack_has_slot(pack, "behavior")
+    has_resource = _pack_has_slot(pack, "resource")
     if not installable:
         status = "incomplete"
         status_label = "追加ファイルが必要です"
@@ -834,7 +1344,12 @@ def _public_pack(pack):
         state_icon = "🟢"
     else:
         status = "installable"
-        status_label = "インストール可能"
+        if has_behavior and has_resource:
+            status_label = "インストール可能"
+        elif has_resource:
+            status_label = "リソースパック（有効化可能）"
+        else:
+            status_label = "ビヘイビアパック（有効化可能）"
         state_class = "ready"
         state_icon = "🟢"
 
@@ -899,14 +1414,20 @@ def analyze_addon_upload(upload_path, original_name):
 
         previews = []
         warnings = []
+        invalid_manifests = 0
+        unreadable_manifests = 0
         for pack_dir in manifests:
             manifest = _parse_manifest(pack_dir / "manifest.json")
-            if not manifest["uuid"]:
+            if manifest.get("parse_error"):
+                unreadable_manifests += 1
+                continue
+            if not _manifest_has_identity(manifest):
+                invalid_manifests += 1
                 continue
             compatible, detail = _check_compatibility(manifest["min_engine_version"])
             item = {
                 "name": manifest["name"],
-                "uuid": manifest["uuid"],
+                "uuid": manifest["uuid"] or manifest.get("behavior_uuid") or manifest.get("resource_uuid"),
                 "version_label": manifest["version_label"],
                 "author": manifest["author"],
                 "description": manifest["description"],
@@ -921,6 +1442,13 @@ def analyze_addon_upload(upload_path, original_name):
                     "detail": detail,
                 })
         if not previews:
+            if unreadable_manifests:
+                raise ValueError(_manifest_read_error_message(manifests, tmp))
+            if invalid_manifests:
+                raise ValueError(
+                    f"manifest.json は {len(manifests)} 件見つかりましたが、"
+                    "有効なUUIDがありません。Bedrock用の正しい .mcpack / .mcaddon か確認してください。"
+                )
             raise ValueError("有効なアドオン情報を読み取れませんでした")
         return {
             "previews": previews,
@@ -945,10 +1473,12 @@ def _ingest_upload_file(upload_path, original_name):
         reg = _load_registry_data()
         for pack_dir in manifests:
             manifest = _parse_manifest(pack_dir / "manifest.json")
-            if not manifest.get("uuid") and not manifest.get("behavior_uuid") and not manifest.get("resource_uuid"):
+            if not _manifest_has_identity(manifest):
                 continue
             entry = _ingest_manifest(reg, pack_dir, manifest, original_name)
             added.append(entry.get("name") or original_name)
+        if not added:
+            raise ValueError("有効なアドオン情報を読み取れませんでした")
         _save_registry_data(reg)
         return added
     finally:
@@ -1014,7 +1544,7 @@ def set_addon_enabled(pack_id, enabled, restart=False):
             raise ValueError("アドオンが見つかりません")
 
         if enabled and not _is_installable(pack):
-            raise ValueError("追加ファイルが必要です。このアドオンには不足しているパックがあります。")
+            raise ValueError("アドオンファイルが不足しています。")
 
         backup_id, _meta = _create_addon_backup()
         for kind in ("behavior", "resource"):

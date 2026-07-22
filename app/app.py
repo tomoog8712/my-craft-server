@@ -915,8 +915,13 @@ def api_worlds_settings_post(world_id):
             msg = "ワールド設定を保存しました"
             if isinstance(result, dict) and result.get("restarted"):
                 msg = "ワールド設定を反映しました"
+            elif isinstance(result, dict) and result.get("applied_live"):
+                msg = "ワールド設定を反映しました（再起動なし）"
             elif isinstance(result, dict) and result.get("needs_restart"):
                 msg += "（反映にはサーバー再起動が必要です）"
+            if isinstance(result, dict) and result.get("restart_required_labels"):
+                labels = "、".join(result["restart_required_labels"])
+                msg += f"（{labels}は再起動後に有効）"
             return jsonify({"success": True, "message": msg, **(result if isinstance(result, dict) else {})})
         return jsonify({"success": False, "message": result}), 400
     except Exception as exc:

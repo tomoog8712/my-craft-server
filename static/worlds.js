@@ -147,7 +147,18 @@
     box.appendChild(b);
   }
 
-  function buildSettingsForm() {
+  const RESTART_HINT = '再起動後に有効';
+
+  function restartHintHtml(restart) {
+    if (!restart) return '';
+    return '<small class="field-hint field-hint-restart">' + RESTART_HINT + '</small>';
+  }
+
+  function buildSettingsForm(fieldApply) {
+    const apply = fieldApply || {};
+    function needsRestart(key) {
+      return apply[key] && apply[key].mode === 'restart';
+    }
     const gamemodes = [
       ['survival', 'Survival'],
       ['creative', 'Creative'],
@@ -164,18 +175,20 @@
     if (!gmBox.dataset.ready) {
       gmBox.innerHTML = gamemodes.map(function (pair) {
         return '<label><input type="radio" name="gamemode" value="' + pair[0] + '"> ' + pair[1] + '</label>';
-      }).join('');
+      }).join('') + restartHintHtml(needsRestart('gamemode'));
       dfBox.innerHTML = difficulties.map(function (pair) {
         return '<label><input type="radio" name="difficulty" value="' + pair[0] + '"> ' + pair[1] + '</label>';
-      }).join('');
+      }).join('') + restartHintHtml(needsRestart('difficulty'));
       const basic = [
         ['pvp', 'PvP', true],
         ['show-coordinates', '座標表示', false],
         ['allow-cheats', 'チート許可', false],
         ['force-gamemode', 'ゲームモード強制', false],
+        ['command_blocks_enabled', 'コマンドブロック', true],
       ];
       $('settings-switches-basic').innerHTML = basic.map(function (item) {
-        return '<label class="switch-cell"><span>' + item[1] + '</span>' +
+        return '<label class="switch-cell"><div class="switch-cell-main"><span>' + item[1] + '</span>' +
+          restartHintHtml(needsRestart(item[0])) + '</div>' +
           '<input type="checkbox" name="' + item[0] + '"' + (item[2] ? ' checked' : '') + ' class="sw"></label>';
       }).join('');
       const rules = [
@@ -190,7 +203,8 @@
         ['fire_spread', '火の延焼', true],
       ];
       $('settings-switches-rules').innerHTML = rules.map(function (item) {
-        return '<label class="switch-cell"><span>' + item[1] + '</span>' +
+        return '<label class="switch-cell"><div class="switch-cell-main"><span>' + item[1] + '</span>' +
+          restartHintHtml(needsRestart(item[0])) + '</div>' +
           '<input type="checkbox" name="' + item[0] + '"' + (item[2] ? ' checked' : '') + ' class="sw"></label>';
       }).join('');
       gmBox.dataset.ready = '1';
@@ -224,6 +238,10 @@
       if (el) el.checked = boolOn(props[key]);
     });
     const rules = settings.rules || {};
+    const commandBlocks = form.querySelector('input[name="command_blocks_enabled"]');
+    if (commandBlocks) {
+      commandBlocks.checked = boolOn(rules.command_blocks_enabled);
+    }
     form.querySelectorAll('#settings-switches-rules input.sw').forEach(function (el) {
       el.checked = boolOn(rules[el.name]);
     });
@@ -244,16 +262,28 @@
   }
 
   async function openSettings(w) {
-    buildSettingsForm();
     setBusy(true, '設定を読み込み中…');
     try {
       const data = await api('GET', '/api/worlds/' + w.id + '/settings');
       currentWorld = w;
       const settings = data.settings || data;
+      buildSettingsForm(settings.field_apply || {});
       $('settings-title').textContent = (settings.display_name || w.display_name) + ' の設定';
-      $('settings-note').textContent = settings.active
-        ? 'このワールド専用の設定です。保存後、サーバー再起動で反映されます。'
-        : 'このワールド専用の設定です。他のワールドには影響しません。';
+      if (settings.active) {
+        $('settings-note').textContent =
+          '保存すると、即時反映できる項目はその場でゲーム内に反映されます（サーバーは止めません）。「再起動後に有効」と表示されている項目だけ、サーバー再起動が必要です。';
+      } else {
+        $('settings-note').textContent = 'このワールド専用の設定です。使用中のワールドに切り替えたときに反映されます。';
+      }
+      const maxHint = $('settings-max-players-hint');
+      const seedHint = $('settings-seed-hint');
+      if (maxHint) {
+        maxHint.hidden = !!(settings.field_apply && settings.field_apply.max_players &&
+          settings.field_apply.max_players.mode === 'restart');
+      }
+      if (seedHint) {
+        seedHint.hidden = false;
+      }
       fillSettingsForm(settings);
       showView('settings');
     } catch (e) {
@@ -279,12 +309,16 @@
     return false;
   }
 
-  async function navigateAfterSave(worldId) {
+  async function navigateAfterSave(worldId, stayOnSettings) {
     setBusy(true, '読み込み中…');
     try {
       await loadWorlds();
       const data = await api('GET', '/api/worlds/' + worldId);
       currentWorld = data.world || data;
+      if (stayOnSettings) {
+        await openSettings(currentWorld);
+        return;
+      }
       renderDetail(currentWorld);
     } catch (e) {
       showSnackbar(e.message, true);
@@ -301,25 +335,17 @@
     const worldId = currentWorld.id;
     const isActive = !!currentWorld.active;
 
-    if (isActive) {
-      const ok = await showConfirm(
-        '設定を反映するには\nMinecraftサーバーを再起動します。\n\n保存して再起動しますか？',
-        '保存する'
-      );
-      if (!ok) return;
-    }
-
-    setBusy(true, isActive ? '設定を反映しています…（再起動中）' : '保存中…');
+    setBusy(true, isActive ? '設定を反映しています…' : '保存中…');
     try {
       const payload = collectSettingsForm(e.target);
       const data = await api('POST', '/api/worlds/' + worldId + '/settings', payload);
-      showSnackbar(data.message || (data.restarted ? '設定を反映しました' : '保存しました'));
+      showSnackbar(data.message || (data.applied_live || data.restarted ? '設定を反映しました' : '保存しました'));
     } catch (err) {
       showSnackbar(err.message, true);
       setBusy(false);
       return;
     }
-    await navigateAfterSave(worldId);
+    await navigateAfterSave(worldId, true);
   }
 
   async function loadWorlds() {

@@ -42,6 +42,7 @@ WORLD_RULE_KEYS = [
     "mob_griefing",
     "tnt",
     "fire_spread",
+    "command_blocks_enabled",
 ]
 
 WORLD_RULE_LABELS = {
@@ -54,6 +55,7 @@ WORLD_RULE_LABELS = {
     "mob_griefing": "Mobによる破壊",
     "tnt": "TNT爆発",
     "fire_spread": "火の延焼",
+    "command_blocks_enabled": "コマンドブロック",
 }
 
 FUTURE_EXTENSIONS = [

@@ -64,21 +64,49 @@
 
 ---
 
+## [1.0.5] - 2026-07-22
+
+### Added
+
+- ワールド設定の即時反映（ゲームモード・難易度・最大人数・PvP・座標表示・各種 gamerule 等を再起動なしで適用）
+- ワールド設定 UI に「再起動後に有効」ラベル（シード値・実績）
+- ワールド設定に「コマンドブロック」トグルを追加
+- サーバー起動時にワールドのゲームルール（コマンドブロック含む）を自動適用
+- アドオン: 入れ子 `.mcpack` / `.mcaddon` / `.zip` の自動展開（最大8段）
+- アドオン: Resource Pack 単体（`.mcpack`）のインストール対応
+- アドオン: コメント付き JSON・文字列バージョン・翻訳キー（`pack.name` 等）の manifest 解析
+- アドオン: パスワード付き ZIP 展開（`ADDON_ZIP_PASSWORD` / `unzip`）
+- `deploy/bin/apply-mhserver-sudoers.sh`（sudoers 更新用）
+- `install.sh`: `unzip` パッケージ、アドオン用ディレクトリ初期化、nginx `/api/addons/upload` タイムアウト拡張
+
+### Changed
+
+- `install.sh`: sudoers を `deploy/bin/mhserver-bedrock` から一元配置（ADDONCTL / priv-exec 対応）
+- `install.sh`: `/opt/appliance/work` とアドオン保存先の権限を mhserver に統一
+- `install.sh`: アドオン registry / history の初期 JSON 形式を現行仕様に合わせる
+- 初期セットアップ（`install.sh`）で `allow-list=false` を設定（空の allowlist による接続拒否を防止）
+
+### Fixed
+
+- コマンドブロックが設置・使用できない問題（`commandblocksenabled` ゲームルール未適用）
+- アドオンアップロード時の manifest 読み取り失敗（`/* */` コメント・Dimzcraft 形式 JSON）
+- アドオン sudo 権限不足（`addon-deploy.sh` 等の NOPASSWD 追加）
+- CurseForge 形式の入れ子アーカイブ・HTML 混入ファイルの判別メッセージ改善
+- 出荷設定・リセット時の `server.properties` 初期化で `shutil.copyfile` を使用（`copy2` の chmod 失敗を回避）
+- 出荷設定のシリアル入力画面で「続行」ボタンが押せない問題を修正（`ui-disabled` の解除タイミング）
+- 出荷設定のシリアル更新失敗を修正（`priv-exec.sh` 経由で sandbox 外から `/etc/appliance` を更新）
+- 出荷前チェックの Playit 判定を修正（`NONE` 応答を未設定として扱う）
+- 出荷設定のアドオン初期化を未設定時スキップ（Bedrock 再起動・起動確認を省略）
+
+---
+
 ## [Unreleased]
 
 ### Added
 
 ### Changed
 
-- 初期セットアップ（`install.sh`）で `allow-list=false` を設定（空の allowlist による接続拒否を防止）
-
 ### Fixed
-
-- 出荷設定・リセット時の `server.properties` 初期化で `shutil.copyfile` を使用（`copy2` の chmod 失敗を回避）
-- 出荷設定のシリアル入力画面で「続行」ボタンが押せない問題を修正（`ui-disabled` の解除タイミング）
-- 出荷設定のシリアル更新失敗を修正（`priv-exec.sh` 経由で sandbox 外から `/etc/appliance` を更新）
-- 出荷前チェックの Playit 判定を修正（`NONE` 応答を未設定として扱う）
-- 出荷設定のアドオン初期化を未設定時スキップ（Bedrock 再起動・起動確認を省略）
 
 ### Removed
 
@@ -113,7 +141,8 @@
 - 未使用ページ（サーバー名変更 `/settings`、システムバックアップ一覧 `/backups`）
 - 重複・未使用 API（ワールド別アドオン API 等）
 
-[Unreleased]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/tomoog8712/my-craft-server/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/tomoog8712/my-craft-server/releases/tag/v1.0.2

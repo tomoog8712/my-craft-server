@@ -24,6 +24,7 @@ REGISTRY_FILE = WORLDS_DATA / "registry.json"
 WORLD_BACKUP_DIR = WORLDS_DATA / "backups"
 WORK_DIR = Path("/opt/appliance/work")
 DEATH_NOTIFY_SCRIPT = "/opt/appliance/bin/world-enable-death-notify.sh"
+CONSOLE_SCRIPT = "/opt/appliance/bin/bedrock-console-send.sh"
 DEATH_NOTIFY_PACK_ID = "c8f4a2b1-3d5e-4f6a-9b0c-1d2e3f4a5b6c"
 
 PLAYTIME_FILE = WORLDS_DATA / "playtime.json"
@@ -57,7 +58,58 @@ DEFAULT_WORLD_RULES = {
     "mob_griefing": "true",
     "tnt": "true",
     "fire_spread": "true",
+    "command_blocks_enabled": "true",
 }
+
+# Internal rule key -> (Bedrock gamerule name, value kind: bool|int)
+GAMERULE_MAP = {
+    "spawn_protection": ("spawnradius", "int"),
+    "daylight_cycle": ("dodaylightcycle", "bool"),
+    "weather": ("doweathercycle", "bool"),
+    "immediate_respawn": ("doimmediaterespawn", "bool"),
+    "mob_spawn": ("domobspawning", "bool"),
+    "mob_griefing": ("mobgriefing", "bool"),
+    "tnt": ("tntexplodes", "bool"),
+    "fire_spread": ("dofiretick", "bool"),
+    "command_blocks_enabled": ("commandblocksenabled", "bool"),
+}
+
+# server.properties keys applied live via Bedrock console (no restart).
+# max-players is persisted in server.properties only; Bedrock rejects changesetting max-players.
+LIVE_CHANGESETTING_MAP = {
+    "allow-cheats": "allow-cheats",
+    "difficulty": "difficulty",
+}
+
+# server.properties keys mirrored as gamerules on a running world.
+LIVE_PROP_GAMERULE_MAP = {
+    "pvp": "pvp",
+    "show-coordinates": "showcoordinates",
+}
+
+# UI/API metadata: which settings apply live vs need a server restart.
+WORLD_SETTING_APPLY = {
+    "gamemode": {"mode": "live", "label_ja": "ゲームモード"},
+    "difficulty": {"mode": "live", "label_ja": "難易度"},
+    "max_players": {"mode": "live", "label_ja": "最大人数"},
+    "seed": {"mode": "restart", "label_ja": "シード値", "hint_ja": "再起動後に有効（既存の地形は変わりません）"},
+    "pvp": {"mode": "live", "label_ja": "PvP"},
+    "show-coordinates": {"mode": "live", "label_ja": "座標表示"},
+    "allow-cheats": {"mode": "live", "label_ja": "チート許可"},
+    "force-gamemode": {"mode": "live", "label_ja": "ゲームモード強制"},
+    "command_blocks_enabled": {"mode": "live", "label_ja": "コマンドブロック"},
+    "spawn_protection": {"mode": "live", "label_ja": "初期スポーン保護"},
+    "achievements": {"mode": "restart", "label_ja": "実績", "hint_ja": "再起動後に有効"},
+    "daylight_cycle": {"mode": "live", "label_ja": "昼夜サイクル"},
+    "weather": {"mode": "live", "label_ja": "天候変化"},
+    "immediate_respawn": {"mode": "live", "label_ja": "即時リスポーン"},
+    "mob_spawn": {"mode": "live", "label_ja": "Mobスポーン"},
+    "mob_griefing": {"mode": "live", "label_ja": "Mobによる破壊"},
+    "tnt": {"mode": "live", "label_ja": "TNT爆発"},
+    "fire_spread": {"mode": "live", "label_ja": "火の延焼"},
+}
+
+RESTART_SETTING_KEYS = {k for k, v in WORLD_SETTING_APPLY.items() if v.get("mode") == "restart"}
 
 _lock = threading.Lock()
 _playtime_lock = threading.Lock()
@@ -265,6 +317,128 @@ def _ensure_open_join_settings():
         return
     write_properties({"allow-list": "false"})
     (MINECRAFT_DIR / "allowlist.json").write_text("[]\n", encoding="utf-8")
+
+
+def _send_bedrock_command(command):
+    code, out, err = _run(["sudo", "-n", CONSOLE_SCRIPT, command], timeout=10)
+    return code == 0 and out == "OK"
+
+
+def _gamerule_value(rule_key, enabled):
+    on = str(enabled).lower() == "true"
+    _kind = GAMERULE_MAP.get(rule_key, (None, None))[1]
+    if _kind == "int":
+        return "5" if on else "0"
+    return "true" if on else "false"
+
+
+def _apply_world_rules(rules):
+    if not _world_running():
+        return False
+    applied = False
+    for rule_key, (gamerule, _kind) in GAMERULE_MAP.items():
+        if rule_key not in rules:
+            continue
+        value = _gamerule_value(rule_key, rules.get(rule_key))
+        if _send_bedrock_command(f"gamerule {gamerule} {value}"):
+            applied = True
+        time.sleep(0.05)
+    return applied
+
+
+def _apply_live_gamemode(props, gamemode_changed=False, force_gamemode_changed=False):
+    gamemode = props.get("gamemode")
+    if not gamemode:
+        return False
+    force = str(props.get("force-gamemode", "false")).lower() == "true"
+    if not (gamemode_changed or (force_gamemode_changed and force)):
+        return False
+    applied = False
+    try:
+        from app.discord_manager import get_online_players
+        players = get_online_players()
+    except Exception:
+        players = []
+    if players:
+        for player in players:
+            if _send_bedrock_command(f"gamemode {gamemode} {player}"):
+                applied = True
+            time.sleep(0.05)
+    elif _send_bedrock_command(f"gamemode {gamemode} @a"):
+        applied = True
+    return applied
+
+
+def _apply_live_max_players(max_players):
+    value = str(max_players or "").strip()
+    if not value.isdigit():
+        return False
+    return _send_bedrock_command(f"setmaxplayers {value}")
+
+
+def _apply_live_world_settings(props, rules, gamemode_changed=False, force_gamemode_changed=False):
+    """Push world settings to a running Bedrock server without restart."""
+    if not _world_running():
+        return False
+    applied = False
+    for prop_key, setting_name in LIVE_CHANGESETTING_MAP.items():
+        value = props.get(prop_key)
+        if value is None or value == "":
+            continue
+        if _send_bedrock_command(f"changesetting {setting_name} {value}"):
+            applied = True
+        time.sleep(0.05)
+    if _apply_live_max_players(props.get("max-players")):
+        applied = True
+    for prop_key, gamerule in LIVE_PROP_GAMERULE_MAP.items():
+        value = props.get(prop_key)
+        if value is None:
+            continue
+        bool_val = "true" if str(value).lower() == "true" else "false"
+        if _send_bedrock_command(f"gamerule {gamerule} {bool_val}"):
+            applied = True
+        time.sleep(0.05)
+    if _apply_live_gamemode(props, gamemode_changed, force_gamemode_changed):
+        applied = True
+    if _apply_world_rules(rules):
+        applied = True
+    return applied
+
+
+def _collect_restart_required_fields(data, profile, props, rules, seed):
+    pending = []
+    prev_seed = str(profile.get("seed") or props.get("level-seed", "")).strip()
+    if str(seed).strip() != prev_seed:
+        pending.append("seed")
+    prev_rules = dict(DEFAULT_WORLD_RULES)
+    prev_rules.update(profile.get("rules") or {})
+    if "achievements" in data and rules.get("achievements") != prev_rules.get("achievements"):
+        pending.append("achievements")
+    return [key for key in pending if key in RESTART_SETTING_KEYS]
+
+
+def _restart_field_labels(field_keys):
+    labels = []
+    for key in field_keys:
+        meta = WORLD_SETTING_APPLY.get(key, {})
+        labels.append(meta.get("label_ja") or key)
+    return labels
+
+
+def _invalidate_registry_cache():
+    _REGISTRY_CACHE["data"] = None
+    _REGISTRY_CACHE["at"] = 0.0
+
+
+def _apply_active_world_rules():
+    reg = sync_registry()
+    active_id = reg.get("active_id")
+    if not active_id:
+        return False
+    profile = _load_profile(active_id)
+    rules = dict(DEFAULT_WORLD_RULES)
+    rules.update(profile.get("rules") or {})
+    return _apply_world_rules(rules)
 
 
 def _find_world_data_dir(path):
@@ -497,6 +671,7 @@ def get_world_settings(world_id):
         "force-gamemode": props.get("force-gamemode", "false"),
         "default-player-permission-level": props.get("default-player-permission-level", "member"),
         "rules": rules,
+        "field_apply": WORLD_SETTING_APPLY,
     }
 
 
@@ -533,10 +708,18 @@ def save_world_settings(world_id, data):
         props["pvp"] = _bool_setting(data.get("pvp", props.get("pvp")), True)
         props["show-coordinates"] = _bool_setting(data.get("show-coordinates", props.get("show-coordinates")), False)
         props["allow-cheats"] = _bool_setting(data.get("allow-cheats", props.get("allow-cheats")), False)
+        prev_gamemode = profile.get("gamemode") or props.get("gamemode", "survival")
+        prev_force_gamemode = props.get("force-gamemode", "false")
+        gamemode_changed = data.get("gamemode") is not None and gamemode != prev_gamemode
         props["force-gamemode"] = _bool_setting(data.get("force-gamemode", props.get("force-gamemode")), False)
-        if data.get("gamemode") is not None:
+        force_gamemode_changed = (
+            "force-gamemode" in data
+            and props["force-gamemode"] != prev_force_gamemode
+        )
+        if gamemode_changed:
             # Existing Bedrock worlds keep creation-time gamemode unless forced.
             props["force-gamemode"] = "true"
+            force_gamemode_changed = props["force-gamemode"] != prev_force_gamemode
         if data.get("default-player-permission-level") is not None:
             props["default-player-permission-level"] = str(data["default-player-permission-level"])
         elif "default-player-permission-level" not in props:
@@ -555,21 +738,41 @@ def save_world_settings(world_id, data):
         profile["rules"] = rules
         _save_profile(world_id, profile)
 
+        entry["gamemode"] = gamemode
+        entry["difficulty"] = difficulty
+        entry["seed"] = seed
+        reg["worlds"][world_id] = entry
+        _save_registry(reg)
+        _invalidate_registry_cache()
+
+        restart_required_fields = _collect_restart_required_fields(data, profile, props, rules, seed)
+
         is_active = reg.get("active_id") == world_id
         restarted = False
+        applied_live = False
         if is_active:
             property_updates = {
                 k: v for k, v in props.items()
                 if k in WORLD_PROPERTY_KEYS and v is not None
             }
-            _stop_and_wait()
             _apply_properties(property_updates)
-            _start_and_wait()
-            restarted = True
+            if _world_running():
+                applied_live = _apply_live_world_settings(
+                    props,
+                    rules,
+                    gamemode_changed,
+                    force_gamemode_changed,
+                )
+            else:
+                _start_and_wait()
+                restarted = True
 
         return True, {
-            "needs_restart": False,
+            "needs_restart": bool(restart_required_fields) and is_active,
+            "restart_required_fields": restart_required_fields,
+            "restart_required_labels": _restart_field_labels(restart_required_fields),
             "restarted": restarted,
+            "applied_live": applied_live,
             "world_id": world_id,
         }
 
@@ -587,6 +790,8 @@ def _start_and_wait():
         raise RuntimeError(f"サーバー起動に失敗: {msg}")
     if not wait_for_running():
         raise RuntimeError("サーバーが起動しませんでした")
+    time.sleep(3)
+    _apply_active_world_rules()
 
 
 def _save_active_snapshot():
@@ -760,6 +965,7 @@ def create_world(data):
                 "mob_griefing": _bool("mob_griefing", True),
                 "tnt": _bool("tnt", True),
                 "fire_spread": _bool("fire_spread", True),
+                "command_blocks_enabled": _bool("command_blocks_enabled", True),
             },
         }
         _save_profile(world_id, profile)

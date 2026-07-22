@@ -142,6 +142,14 @@
   font-size: 0.95rem;
 }
 
+.switch-cell-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
 .world-btn {
   width: 100%;
   min-height: 44px;
@@ -323,6 +331,16 @@
   margin-top: 4px;
   font-size: 0.75rem;
   color: var(--text-sub);
+}
+
+.field-hint-restart {
+  color: #c77800;
+}
+
+.radio-row + .field-hint,
+.switch-cell .field-hint-restart {
+  grid-column: 1 / -1;
+  margin-top: 2px;
 }
 
 .file-input-offscreen {
